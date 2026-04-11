@@ -1,0 +1,21 @@
+slide_detection:
+  slide_change_threshold: 0.90  # 연속 샘플 간 SSIM이 이 값 미만이면 슬라이드 전환으로 판단
+  ssim_merge_threshold: 0.85    # 인접 슬라이드 간 SSIM이 이 값 이상이면 동일 슬라이드로 병합
+  frame_sample_rate: 1          # 초당 샘플링 프레임 수 (1 = 1초마다 한 프레임)
+  min_slide_sec: 3.0            # 슬라이드 최소 지속 시간 (초) — 오탐 방지
+
+stt:
+  model_name: "large-v3"
+  device: "cuda"
+  compute_type: "float16"
+  language: "ko"
+  beam_size: 5
+  batch_size: 8
+
+export:
+  format: "html"        # html | pdf | markdown
+  embed_images: true    # HTML base64 임베드
+
+paths:
+  output_dir: "output"
+  tmp_dir: ".tmp"
