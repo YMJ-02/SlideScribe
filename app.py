@@ -108,5 +108,11 @@ def build_ui() -> gr.Blocks:
 
 
 if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser(description="SlideScribe Gradio UI")
+    parser.add_argument("--share", action="store_true", help="Create a public Gradio link")
+    parser.add_argument("--port", type=int, default=7860, help="Local port (default: 7860)")
+    args = parser.parse_args()
+
     demo = build_ui()
-    demo.launch(server_name="0.0.0.0", server_port=7860, share=False)
+    demo.launch(server_name="0.0.0.0", server_port=args.port, share=args.share)
