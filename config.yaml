@@ -11,6 +11,7 @@ stt:
   language: "auto"   # auto | ko | en | ja | zh | fr | de | es | pt | ru
   beam_size: 5
   batch_size: 8
+  kospacing: true    # Korean spacing correction (applied when detected/selected language is ko)
 
 export:
   format: "html"        # html | pdf | markdown

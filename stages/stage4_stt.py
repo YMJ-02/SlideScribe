@@ -122,6 +122,33 @@ def run(wav_path: str, cfg: dict | None = None) -> list[dict]:
         })
 
     print(f"[Stage 4] 완료: {len(segments)}개 세그먼트")
+
+    # ── PyKoSpacing 후처리 ────────────────────────────────────────────
+    detected_lang = info.language  # faster-whisper가 감지한 실제 언어
+    if stt_cfg.get("kospacing", False) and detected_lang == "ko":
+        segments = _apply_kospacing(segments)
+
+    return segments
+
+
+def _apply_kospacing(segments: list[dict]) -> list[dict]:
+    """PyKoSpacing으로 한국어 띄어쓰기 교정.
+
+    import 실패 또는 런타임 오류 시 경고 출력 후 원본 반환 (soft dependency).
+    """
+    try:
+        from pykospacing import Spacing
+        spacing = Spacing()
+        print("[Stage 4] PyKoSpacing 띄어쓰기 교정 적용 중…")
+        for seg in segments:
+            if seg["text"]:
+                seg["text"] = spacing(seg["text"])
+        print("[Stage 4] PyKoSpacing 완료")
+    except ImportError:
+        print("[Stage 4] 경고: PyKoSpacing 미설치 — 원본 텍스트 사용")
+        print("          설치: pip install git+https://github.com/haven-jeon/PyKoSpacing.git")
+    except Exception as e:
+        print(f"[Stage 4] 경고: PyKoSpacing 실패 ({e}) — 원본 텍스트 사용")
     return segments
 
 
