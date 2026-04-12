@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lecture Note — CS5210 Deep Learning</title>
+  <style>* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  background: #e0e2e8; padding: 40px 28px; color: #222;
+}
+h1 {
+  text-align: center; color: #1a1a2e; margin-bottom: 8px;
+  font-size: 1.15em; font-weight: 700; letter-spacing: 0.06em;
+}
+.subtitle {
+  text-align: center; color: #888; font-size: 0.78em;
+  margin-bottom: 36px; letter-spacing: 0.03em;
+}
+.note-page {
+  width: 1496px; height: 794px;
+  background: #fff; border: 1px solid #bfc2cc; border-radius: 6px;
+  box-shadow: 0 4px 18px rgba(0,0,0,0.13);
+  margin: 0 auto 44px auto;
+  display: grid; grid-template-rows: 36px 1fr; overflow: hidden;
+}
+.page-header {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 0 18px; background: #1a1a2e; color: #fff;
+}
+.page-header .slide-num  { font-size: 0.74em; font-weight: 700; letter-spacing: 0.05em; }
+.page-header .slide-time { font-size: 0.68em; color: #99a; font-variant-numeric: tabular-nums; }
+.page-body {
+  display: grid; grid-template-columns: 3fr 1fr; overflow: hidden;
+}
+.slide-panel {
+  display: flex; align-items: center; justify-content: center;
+  background: #f2f3f7; padding: 12px; overflow: hidden;
+}
+.slide-panel img {
+  max-width: 100%; max-height: 100%; object-fit: contain;
+  display: block; border: 1px solid #d8dae2; border-radius: 3px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+}
+.transcript-panel {
+  border-left: 2px solid #e2e4ec; padding: 12px 14px;
+  overflow: hidden; display: flex; flex-direction: column; background: #fff;
+}
+.transcript-label {
+  font-size: 0.60em; font-weight: 700; color: #b0b4c4;
+  text-transform: uppercase; letter-spacing: 0.09em;
+  margin-bottom: 6px; flex-shrink: 0;
+  border-bottom: 1px solid #f0f1f5; padding-bottom: 5px;
+}
+.transcript {
+  font-size: 0.685em; line-height: 1.68; white-space: pre-wrap;
+  color: #2e3248; overflow: hidden; flex: 1;
+  word-break: break-word;
+}
+@media print {
+  body { background: #fff; padding: 0; }
+  h1, .subtitle { display: none; }
+  .note-page {
+    width: 396mm; height: 210mm;
+    page-break-after: always; box-shadow: none;
+    border: none; margin: 0; border-radius: 0;
+  }
+}</style>
+</head>
+<body>
+  <h1>Lecture Note</h1>
+  <p class="subtitle">CS5210 | Deep Learning | Spring 2026 | Prof. Williams</p>
+  <div class="note-page">
+    <div class="page-header">
+      <span class="slide-num">Slide 1 / 3</span>
+      <span class="slide-time">00:00 &ndash; 11:59</span>
+    </div>
+    <div class="page-body">
+      <div class="slide-panel">
+        <img src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAx..." alt="Slide 1">
+      </div>
+      <div class="transcript-panel">
+        <div class="transcript-label">Transcript</div>
+        <div class="transcript">So let's kick things off with a quick overview of what deep learning actually is and why it's been so transformative over the last decade. At its core, a deep neural network is just a function — a very complicated, highly parameterized function — that maps inputs to outputs. What makes it deep is the fact that we stack many layers of transformations on top of each other, and each layer learns a slightly more abstract representation of the data than the one before it.
+
+The perceptron, which you've probably seen before, is the building block. A single perceptron computes a weighted sum of its inputs and passes it through an activation function. Stack thousands of these in parallel and you get a layer. Stack many layers and you get a deep network.
+
+Forward propagation is just the process of passing your input through all those layers from left to right — from input to output — computing activations at each step. We'll formalize that in a moment. The backpropagation algorithm is how we actually train these networks.</div>
+      </div>
+    </div>
+  </div>
+  <div class="note-page">
+    <div class="page-header">
+      <span class="slide-num">Slide 2 / 3</span>
+      <span class="slide-time">12:00 &ndash; 23:59</span>
+    </div>
+    <div class="page-body">
+      <div class="slide-panel">
+        <img src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAx..." alt="Slide 2">
+      </div>
+      <div class="transcript-panel">
+        <div class="transcript-label">Transcript</div>
+        <div class="transcript">Alright, so we've got our network architecture defined — now the question is how do we actually train it? That's where gradient descent comes in. The idea is beautifully simple: we define a scalar loss function that measures how bad our current predictions are, and we move the weights in the direction that makes the loss go down the fastest.
+
+For regression the standard choice is mean squared error — you square the difference between the prediction and the ground truth and average over all your training examples. For classification you'd typically use cross-entropy loss instead. The gradient of the loss with respect to any weight tells us the slope of the loss landscape in that direction. Moving opposite to the gradient is called steepest descent.
+
+The learning rate alpha is genuinely one of the most important hyperparameters you'll tune. Set it too high and your updates will overshoot the minimum and the loss will actually go up or oscillate wildly.</div>
+      </div>
+    </div>
+  </div>
+  <div class="note-page">
+    <div class="page-header">
+      <span class="slide-num">Slide 3 / 3</span>
+      <span class="slide-time">24:00 &ndash; 35:59</span>
+    </div>
+    <div class="page-body">
+      <div class="slide-panel">
+        <img src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAx..." alt="Slide 3">
+      </div>
+      <div class="transcript-panel">
+        <div class="transcript-label">Transcript</div>
+        <div class="transcript">Convolutional Neural Networks were the breakthrough that really put deep learning on the map, specifically for image-related tasks. The key insight is that natural images have a strong spatial structure — nearby pixels are related, and the same features like edges and textures appear in many different locations. A fully connected layer has no way to exploit this structure because it treats every pixel independently regardless of position.
+
+A convolutional layer instead applies a small learned filter — say 3×3 pixels — at every possible position in the image, computing a dot product between the filter weights and the local image patch. This gives us two huge advantages. First, parameter sharing: the same filter is reused everywhere. Second, translation equivariance: if the cat moves two pixels to the right, the feature map just shifts two pixels to the right.</div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
