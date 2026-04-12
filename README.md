@@ -239,7 +239,6 @@ A. Use a smaller model (`medium` or `small`) or switch to `device: "cpu"` with `
 
 # 🎓 SlideScribe (한국어)
 
-대부분의 도구는 원시 트랜스크립트를 낸다. SlideScribe는 구조화된 노트를 낸다 — 각 슬라이드에 실제로 한 말이 매칭된 형태로.
 
 강의 영상을 넣으면 슬라이드마다 트랜스크립트가 연결된 페이지 형태의 노트가 자동으로 만들어집니다.
 
