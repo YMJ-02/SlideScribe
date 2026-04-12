@@ -176,8 +176,9 @@ def _export_html(matched: list[dict], out_path: str) -> None:
         )
         # Audio-only input has no slide image
         fp = slide.get("frame_path", "")
+        slide_num = slide['idx'] + 1
         img_html = (
-            f'<img src="data:image/jpeg;base64,{_img_to_b64(fp)}" alt="슬라이드 {slide[\'idx\']+1}">'
+            f'<img src="data:image/jpeg;base64,{_img_to_b64(fp)}" alt="슬라이드 {slide_num}">'
             if fp and os.path.isfile(fp) else
             '<div class="no-slide">(슬라이드 이미지 없음)</div>'
         )
