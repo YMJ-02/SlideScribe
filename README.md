@@ -21,11 +21,7 @@ Drop in a lecture video. Get back a paginated document with every slide matched 
 
 ## Example Note Preview
 
-A sample lecture note preview file is available here:
-
-- [lecture_note_demo.html](https://github.com/YMJ-02/SlideScribe/blob/master/docs/lecture_note_demo.html)
-
-Open the file in a browser to see the full layout with slide pages and transcript panels.
+![Example Note Preview](docs/preview.png)
 
 ---
 
@@ -262,11 +258,7 @@ A. Use a smaller model (`medium` or `small`) or switch to `device: "cpu"` with `
 
 ## 예시 노트 미리보기
 
-예시 강의 노트 HTML 파일:
-
-- [lecture_note_demo.html](https://github.com/YMJ-02/SlideScribe/blob/master/docs/lecture_note_demo.html)
-
-브라우저에서 열면 슬라이드 페이지와 우측 스크립트 패널이 포함된 전체 레이아웃을 확인할 수 있음.
+![예시 노트 미리보기](docs/preview.png)
 
 ---
 
