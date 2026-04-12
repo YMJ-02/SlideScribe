@@ -1,4 +1,17 @@
-# lecture-note-gen
+<div align="center">
+
+# 🎓 SlideScribe
+
+**Turn any lecture video into a structured, readable note — automatically.**
+
+[![version](https://img.shields.io/badge/version-0.1.0-blue?style=flat-square)](https://github.com/YMJ-02/lecture-note/releases)
+[![license](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
+[![python](https://img.shields.io/badge/python-3.10%2B-3776AB?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
+[![CI](https://img.shields.io/badge/CI-passing-brightgreen?style=flat-square&logo=github-actions&logoColor=white)](https://github.com/YMJ-02/lecture-note/actions)
+
+</div>
+
+---
 
 Automatically generates lecture notes from a video file.
 Detects slide transitions, transcribes audio via Whisper, and exports a structured note document.
@@ -160,7 +173,7 @@ of this software and associated documentation files (the "Software"), to deal
 in the Software without restriction, including without limitation the rights
 to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+provided to do so, subject to the following conditions:
 
 The above copyright notice and this permission notice shall be included in all
 copies or substantial portions of the Software.
@@ -238,7 +251,7 @@ A. Use a smaller model (`medium` or `small`) or switch to `device: "cpu"` with `
 
 ---
 
-# lecture-note-gen (한국어)
+# 🎓 SlideScribe (한국어)
 
 강의 영상에서 강의 노트를 자동으로 생성합니다.
 슬라이드 전환 감지 → Whisper 음성 인식 → 구조화된 노트 문서 출력.
