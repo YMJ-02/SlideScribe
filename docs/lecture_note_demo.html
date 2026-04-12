@@ -3,127 +3,192 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Lecture Note — CS5210 Deep Learning</title>
-  <style>* { box-sizing: border-box; margin: 0; padding: 0; }
-body {
-  font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
-  background: #e0e2e8; padding: 40px 28px; color: #222;
-}
-h1 {
-  text-align: center; color: #1a1a2e; margin-bottom: 8px;
-  font-size: 1.15em; font-weight: 700; letter-spacing: 0.06em;
-}
-.subtitle {
-  text-align: center; color: #888; font-size: 0.78em;
-  margin-bottom: 36px; letter-spacing: 0.03em;
-}
-.note-page {
-  width: 1496px; height: 794px;
-  background: #fff; border: 1px solid #bfc2cc; border-radius: 6px;
-  box-shadow: 0 4px 18px rgba(0,0,0,0.13);
-  margin: 0 auto 44px auto;
-  display: grid; grid-template-rows: 36px 1fr; overflow: hidden;
-}
-.page-header {
-  display: flex; justify-content: space-between; align-items: center;
-  padding: 0 18px; background: #1a1a2e; color: #fff;
-}
-.page-header .slide-num  { font-size: 0.74em; font-weight: 700; letter-spacing: 0.05em; }
-.page-header .slide-time { font-size: 0.68em; color: #99a; font-variant-numeric: tabular-nums; }
-.page-body {
-  display: grid; grid-template-columns: 3fr 1fr; overflow: hidden;
-}
-.slide-panel {
-  display: flex; align-items: center; justify-content: center;
-  background: #f2f3f7; padding: 12px; overflow: hidden;
-}
-.slide-panel img {
-  max-width: 100%; max-height: 100%; object-fit: contain;
-  display: block; border: 1px solid #d8dae2; border-radius: 3px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
-}
-.transcript-panel {
-  border-left: 2px solid #e2e4ec; padding: 12px 14px;
-  overflow: hidden; display: flex; flex-direction: column; background: #fff;
-}
-.transcript-label {
-  font-size: 0.60em; font-weight: 700; color: #b0b4c4;
-  text-transform: uppercase; letter-spacing: 0.09em;
-  margin-bottom: 6px; flex-shrink: 0;
-  border-bottom: 1px solid #f0f1f5; padding-bottom: 5px;
-}
-.transcript {
-  font-size: 0.685em; line-height: 1.68; white-space: pre-wrap;
-  color: #2e3248; overflow: hidden; flex: 1;
-  word-break: break-word;
-}
-@media print {
-  body { background: #fff; padding: 0; }
-  h1, .subtitle { display: none; }
-  .note-page {
-    width: 396mm; height: 210mm;
-    page-break-after: always; box-shadow: none;
-    border: none; margin: 0; border-radius: 0;
-  }
-}</style>
+  <title>Lecture Note Demo</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; background:#e0e2e8; padding:40px; }
+    .wrap { width:1496px; margin:0 auto; }
+    h1 { text-align:center; color:#1a1a2e; margin-bottom:8px; }
+    .sub { text-align:center; color:#777; margin-bottom:24px; }
+    .note-page { width:1496px; height:794px; background:#fff; border:1px solid #c8ccd6; margin:0 auto 40px; box-shadow:0 4px 18px rgba(0,0,0,.12); display:grid; grid-template-rows:36px 1fr; overflow:hidden; }
+    .page-header { background:#1a1a2e; color:#fff; display:flex; justify-content:space-between; align-items:center; padding:0 18px; font-size:12px; }
+    .page-body { display:grid; grid-template-columns:3fr 1fr; height:100%; }
+    .slide-panel { background:#f2f3f7; display:flex; align-items:center; justify-content:center; padding:12px; }
+    .slide { width:100%; height:100%; background:#f8f9fc; border:1px solid #d8dae2; position:relative; overflow:hidden; }
+    .s-head { height:95px; color:#fff; padding:16px 36px; }
+    .s-title { font-size:28px; font-weight:700; }
+    .s-sub { font-size:14px; margin-top:10px; opacity:.78; }
+    .bar { height:3px; background:#d6dced; }
+    .content { padding:22px 36px; position:relative; height:calc(100% - 98px); }
+    .col-left { position:absolute; left:36px; top:22px; width:420px; }
+    .col-right { position:absolute; right:36px; top:18px; width:360px; height:360px; }
+    .sec { color:#203a76; font-size:22px; font-weight:700; margin-bottom:8px; }
+    .rule { height:2px; background:#203a76; width:250px; margin-bottom:16px; }
+    .bullet { font-size:20px; color:#2b3144; margin:18px 0; line-height:1.4; }
+    .footer { position:absolute; left:0; right:0; bottom:0; height:34px; background:#eceff7; color:#8c92a5; font-size:12px; padding:9px 36px; }
+    .transcript-panel { border-left:2px solid #e2e4ec; padding:12px 14px; background:#fff; overflow:hidden; }
+    .label { font-size:10px; color:#aeb4c2; font-weight:700; letter-spacing:.1em; border-bottom:1px solid #f0f1f5; padding-bottom:5px; margin-bottom:8px; }
+    .transcript { font-size:11px; line-height:1.68; color:#2e3248; white-space:pre-wrap; }
+    .nn line { stroke:#c8cfdf; stroke-width:1; }
+    .curve { stroke:#18a57a; stroke-width:4; fill:none; }
+    .axis { stroke:#8d9a98; stroke-width:2; }
+    .box { stroke:#fff; stroke-width:2; }
+  </style>
 </head>
 <body>
+<div class="wrap">
   <h1>Lecture Note</h1>
-  <p class="subtitle">CS5210 | Deep Learning | Spring 2026 | Prof. Williams</p>
+  <div class="sub">CS5210 | Deep Learning | Spring 2026 | Prof. Williams</div>
+
   <div class="note-page">
-    <div class="page-header">
-      <span class="slide-num">Slide 1 / 3</span>
-      <span class="slide-time">00:00 &ndash; 11:59</span>
-    </div>
+    <div class="page-header"><span>Slide 1 / 3</span><span>00:00 – 11:59</span></div>
     <div class="page-body">
       <div class="slide-panel">
-        <img src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAx..." alt="Slide 1">
+        <div class="slide">
+          <div class="s-head" style="background:#0f2864;">
+            <div class="s-title">Introduction to Deep Learning</div>
+            <div class="s-sub">CS5210 — Lecture 7 | Prof. Williams</div>
+          </div>
+          <div class="bar"></div>
+          <div class="content">
+            <div class="col-left">
+              <div class="sec">Key Concepts</div>
+              <div class="rule"></div>
+              <div class="bullet">• Perceptron & Multi-Layer Networks</div>
+              <div class="bullet">• Forward Propagation</div>
+              <div class="bullet">• Backpropagation Algorithm</div>
+              <div class="bullet">• Vanishing Gradient Problem</div>
+              <div class="bullet">• Batch Normalization</div>
+            </div>
+            <svg class="col-right nn" viewBox="0 0 360 360">
+              <line x1="45" y1="80" x2="165" y2="55"/><line x1="45" y1="80" x2="165" y2="125"/><line x1="45" y1="80" x2="165" y2="195"/><line x1="45" y1="80" x2="165" y2="265"/>
+              <line x1="45" y1="170" x2="165" y2="55"/><line x1="45" y1="170" x2="165" y2="125"/><line x1="45" y1="170" x2="165" y2="195"/><line x1="45" y1="170" x2="165" y2="265"/>
+              <line x1="45" y1="260" x2="165" y2="55"/><line x1="45" y1="260" x2="165" y2="125"/><line x1="45" y1="260" x2="165" y2="195"/><line x1="45" y1="260" x2="165" y2="265"/>
+              <line x1="165" y1="55" x2="295" y2="135"/><line x1="165" y1="55" x2="295" y2="225"/>
+              <line x1="165" y1="125" x2="295" y2="135"/><line x1="165" y1="125" x2="295" y2="225"/>
+              <line x1="165" y1="195" x2="295" y2="135"/><line x1="165" y1="195" x2="295" y2="225"/>
+              <line x1="165" y1="265" x2="295" y2="135"/><line x1="165" y1="265" x2="295" y2="225"/>
+              <circle cx="45" cy="80" r="22" fill="#4b86db" class="box"/><circle cx="45" cy="170" r="22" fill="#4b86db" class="box"/><circle cx="45" cy="260" r="22" fill="#4b86db" class="box"/>
+              <circle cx="165" cy="55" r="22" fill="#37b777" class="box"/><circle cx="165" cy="125" r="22" fill="#37b777" class="box"/><circle cx="165" cy="195" r="22" fill="#37b777" class="box"/><circle cx="165" cy="265" r="22" fill="#37b777" class="box"/>
+              <circle cx="295" cy="135" r="22" fill="#db7a5d" class="box"/><circle cx="295" cy="225" r="22" fill="#db7a5d" class="box"/>
+              <text x="35" y="85" fill="#fff">x1</text><text x="35" y="175" fill="#fff">x2</text><text x="35" y="265" fill="#fff">x3</text>
+              <text x="156" y="60" fill="#fff">h1</text><text x="156" y="130" fill="#fff">h2</text><text x="156" y="200" fill="#fff">h3</text><text x="156" y="270" fill="#fff">h4</text>
+              <text x="286" y="140" fill="#fff">y1</text><text x="286" y="230" fill="#fff">y2</text>
+              <text x="22" y="324" fill="#8c92a5">Input</text><text x="145" y="324" fill="#8c92a5">Hidden</text><text x="274" y="324" fill="#8c92a5">Output</text>
+            </svg>
+            <div class="footer">CS5210 | Deep Learning | Spring 2026</div>
+          </div>
+        </div>
       </div>
       <div class="transcript-panel">
-        <div class="transcript-label">Transcript</div>
+        <div class="label">Transcript</div>
         <div class="transcript">So let's kick things off with a quick overview of what deep learning actually is and why it's been so transformative over the last decade. At its core, a deep neural network is just a function — a very complicated, highly parameterized function — that maps inputs to outputs. What makes it deep is the fact that we stack many layers of transformations on top of each other, and each layer learns a slightly more abstract representation of the data than the one before it.
 
-The perceptron, which you've probably seen before, is the building block. A single perceptron computes a weighted sum of its inputs and passes it through an activation function. Stack thousands of these in parallel and you get a layer. Stack many layers and you get a deep network.
+The perceptron is the fundamental building block. A single perceptron computes a weighted sum of its inputs and passes it through an activation function. Stack thousands of these in parallel and you get a layer. Stack many layers and you get a deep network.
 
-Forward propagation is just the process of passing your input through all those layers from left to right — from input to output — computing activations at each step. We'll formalize that in a moment. The backpropagation algorithm is how we actually train these networks.</div>
+Forward propagation is simply the process of passing the input through all of these layers from left to right, computing activations at each step. The backpropagation algorithm is how we actually train these networks: we compute the gradient of the loss with respect to every weight using the chain rule, then update the weights accordingly.
+
+One thing to be careful about is the vanishing gradient problem. When the network becomes deeper and the activation saturates, gradients can become too small for early layers to learn effectively.</div>
       </div>
     </div>
   </div>
+
   <div class="note-page">
-    <div class="page-header">
-      <span class="slide-num">Slide 2 / 3</span>
-      <span class="slide-time">12:00 &ndash; 23:59</span>
-    </div>
+    <div class="page-header"><span>Slide 2 / 3</span><span>12:00 – 23:59</span></div>
     <div class="page-body">
       <div class="slide-panel">
-        <img src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAx..." alt="Slide 2">
+        <div class="slide">
+          <div class="s-head" style="background:#0c5a4b;">
+            <div class="s-title">Gradient Descent & Optimization</div>
+            <div class="s-sub">CS5210 — Lecture 7 | Prof. Williams</div>
+          </div>
+          <div class="bar" style="background:#c2e3d8;"></div>
+          <div class="content">
+            <div class="col-left">
+              <div class="sec" style="color:#0c5a4b;">Loss Landscape</div>
+              <div class="rule" style="background:#0c5a4b;"></div>
+              <div class="bullet">L(w) = (1/N) Σ (yᵢ − ŷᵢ)²</div>
+              <div class="bullet">∂L/∂w = −(2/N) Σ xᵢ(yᵢ − ŷᵢ)</div>
+              <div class="bullet">w ← w − α · ∂L/∂w</div>
+              <div class="bullet">α = learning rate (0.001 ~ 0.01)</div>
+            </div>
+            <svg class="col-right" viewBox="0 0 360 360">
+              <rect x="8" y="18" width="320" height="250" fill="#f4faf7" stroke="#bdd7cc"/>
+              <line x1="42" y1="38" x2="42" y2="248" class="axis"/>
+              <line x1="42" y1="248" x2="310" y2="248" class="axis"/>
+              <text x="52" y="34" fill="#6a847e">Loss</text>
+              <text x="258" y="244" fill="#6a847e">Epoch</text>
+              <path d="M50,70 C80,95 90,115 110,140 C130,165 150,180 175,195 C200,207 225,218 255,223 C270,225 286,226 300,227" class="curve"/>
+              <text x="58" y="58" fill="#18a57a">Training Loss</text>
+            </svg>
+            <div class="footer" style="background:#ebf6f2;">CS5210 | Deep Learning | Spring 2026</div>
+          </div>
+        </div>
       </div>
       <div class="transcript-panel">
-        <div class="transcript-label">Transcript</div>
-        <div class="transcript">Alright, so we've got our network architecture defined — now the question is how do we actually train it? That's where gradient descent comes in. The idea is beautifully simple: we define a scalar loss function that measures how bad our current predictions are, and we move the weights in the direction that makes the loss go down the fastest.
+        <div class="label">Transcript</div>
+        <div class="transcript">Alright, so we've got our network architecture defined — now the question is how do we actually train it? That's where gradient descent comes in. The idea is simple: define a scalar loss function that measures how bad the current predictions are, and move the weights in the direction that makes the loss go down the fastest.
 
-For regression the standard choice is mean squared error — you square the difference between the prediction and the ground truth and average over all your training examples. For classification you'd typically use cross-entropy loss instead. The gradient of the loss with respect to any weight tells us the slope of the loss landscape in that direction. Moving opposite to the gradient is called steepest descent.
+For regression the standard choice is mean squared error. For classification you'd typically use cross-entropy instead. The gradient of the loss with respect to a particular weight tells us the slope of the loss surface in that direction, and moving opposite to the gradient is called steepest descent.
 
-The learning rate alpha is genuinely one of the most important hyperparameters you'll tune. Set it too high and your updates will overshoot the minimum and the loss will actually go up or oscillate wildly.</div>
+The learning rate alpha is one of the most important hyperparameters you'll ever tune. If it's too large, updates overshoot the minimum and the loss can oscillate or diverge. If it's too small, training becomes painfully slow. In practice, people often use Adam because it adapts the effective learning rate for each parameter based on the first and second moments of the gradient.
+
+If you look at a typical loss curve, you'll see a sharp drop at the beginning, followed by a slower taper as the network approaches a good region of the parameter space.</div>
       </div>
     </div>
   </div>
+
   <div class="note-page">
-    <div class="page-header">
-      <span class="slide-num">Slide 3 / 3</span>
-      <span class="slide-time">24:00 &ndash; 35:59</span>
-    </div>
+    <div class="page-header"><span>Slide 3 / 3</span><span>24:00 – 35:59</span></div>
     <div class="page-body">
       <div class="slide-panel">
-        <img src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAx..." alt="Slide 3">
+        <div class="slide">
+          <div class="s-head" style="background:#5a1950;">
+            <div class="s-title">Convolutional Neural Networks</div>
+            <div class="s-sub">CS5210 — Lecture 7 | Prof. Williams</div>
+          </div>
+          <div class="bar" style="background:#dcc2da;"></div>
+          <div class="content">
+            <div class="col-left">
+              <div class="sec" style="color:#5a1950;">CNN Architecture Layers</div>
+              <div class="rule" style="background:#5a1950;"></div>
+              <div class="bullet">Conv2D — 32 filters, 3×3, ReLU</div>
+              <div class="bullet">MaxPool2D — 2×2, stride 2</div>
+              <div class="bullet">Conv2D — 64 filters, 3×3, ReLU</div>
+              <div class="bullet">Flatten → Dense → Softmax</div>
+            </div>
+            <svg class="col-right" viewBox="0 0 360 360">
+              <rect x="30" y="65" width="90" height="90" fill="#7bb0ec" stroke="#fff" stroke-width="2"/>
+              <rect x="36" y="59" width="90" height="90" fill="#7bb0ec" stroke="#fff" stroke-width="2"/>
+              <rect x="42" y="53" width="90" height="90" fill="#7bb0ec" stroke="#fff" stroke-width="2"/>
+              <rect x="158" y="80" width="70" height="70" fill="#62c49c" stroke="#fff" stroke-width="2"/>
+              <rect x="164" y="74" width="70" height="70" fill="#62c49c" stroke="#fff" stroke-width="2"/>
+              <rect x="170" y="68" width="70" height="70" fill="#62c49c" stroke="#fff" stroke-width="2"/>
+              <rect x="278" y="95" width="48" height="48" fill="#de9272" stroke="#fff" stroke-width="2"/>
+              <rect x="284" y="89" width="48" height="48" fill="#de9272" stroke="#fff" stroke-width="2"/>
+              <rect x="290" y="83" width="48" height="48" fill="#de9272" stroke="#fff" stroke-width="2"/>
+              <line x1="132" y1="98" x2="165" y2="104" stroke="#968b9f" stroke-width="2"/><polygon points="160,99 171,104 159,109" fill="#968b9f"/>
+              <line x1="240" y1="104" x2="284" y2="108" stroke="#968b9f" stroke-width="2"/><polygon points="279,103 290,108 278,113" fill="#968b9f"/>
+              <text x="52" y="185" fill="#7d7085">Conv 1</text>
+              <text x="178" y="185" fill="#7d7085">Conv 2</text>
+              <text x="293" y="185" fill="#7d7085">Dense</text>
+            </svg>
+            <div class="footer" style="background:#f2e8f3;">CS5210 | Deep Learning | Spring 2026</div>
+          </div>
+        </div>
       </div>
       <div class="transcript-panel">
-        <div class="transcript-label">Transcript</div>
-        <div class="transcript">Convolutional Neural Networks were the breakthrough that really put deep learning on the map, specifically for image-related tasks. The key insight is that natural images have a strong spatial structure — nearby pixels are related, and the same features like edges and textures appear in many different locations. A fully connected layer has no way to exploit this structure because it treats every pixel independently regardless of position.
+        <div class="label">Transcript</div>
+        <div class="transcript">Convolutional Neural Networks were the breakthrough that really pushed deep learning into the mainstream for image-related tasks. The key insight is that natural images have strong local structure — nearby pixels are highly correlated, and similar patterns such as edges, corners, and textures appear in many locations.
 
-A convolutional layer instead applies a small learned filter — say 3×3 pixels — at every possible position in the image, computing a dot product between the filter weights and the local image patch. This gives us two huge advantages. First, parameter sharing: the same filter is reused everywhere. Second, translation equivariance: if the cat moves two pixels to the right, the feature map just shifts two pixels to the right.</div>
+A convolutional layer applies a small learned filter, for example a 3×3 kernel, across the image. At every spatial location the filter computes a dot product with a local patch, producing a feature map. This gives us parameter sharing and translation equivariance almost for free.
+
+Pooling layers then reduce the spatial resolution while preserving the strongest activations. Max pooling is the standard choice because it keeps the most salient response in each window. After several rounds of convolution and pooling, the feature maps are flattened into a one-dimensional vector and sent into dense layers to produce class scores.
+
+Finally, a softmax layer converts those scores into a probability distribution over all target classes, allowing the model to output a clear prediction.</div>
       </div>
     </div>
   </div>
+</div>
 </body>
 </html>
