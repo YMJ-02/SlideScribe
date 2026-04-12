@@ -4,83 +4,111 @@ Runs the SlideScribe note generation UI on localhost.
 """
 
 import os
+import zipfile
+import tempfile
 import yaml
 import gradio as gr
+from pathlib import Path
 
 from run import load_config, run_pipeline, AUDIO_EXTS
 from i18n import t, WHISPER_DISPLAY_NAMES, WHISPER_CODE_MAP
 
 
+def _build_cfg(fmt, scene_threshold, ssim_threshold, whisper_lang):
+    cfg = load_config()
+    cfg["export"]["format"] = fmt
+    cfg["slide_detection"]["slide_change_threshold"] = scene_threshold
+    cfg["slide_detection"]["ssim_merge_threshold"] = ssim_threshold
+    cfg["stt"]["language"] = WHISPER_CODE_MAP.get(whisper_lang, "auto") or "auto"
+    return cfg
+
+
 def _run_for_gradio(
-    video_file,
+    video_files,
     fmt: str,
     scene_threshold: float,
     ssim_threshold: float,
     whisper_lang: str,
     ui_lang: str,
     progress=gr.Progress(track_tqdm=True),
-) -> tuple[str, str, str, str]:
+) -> tuple[str, str | None]:
+    """Handles single or multiple file uploads.
+
+    Returns:
+        (status message, zip file path for download)
+    """
     lang = "en" if ui_lang == "English" else "ko"
 
-    if video_file is None:
-        return t("error_no_file", lang), None, None, None
+    if not video_files:
+        return t("error_no_file", lang), None
 
-    video_path = video_file if isinstance(video_file, str) else video_file.name
-    from pathlib import Path as _Path
-    stem = _Path(video_path).stem
+    # Normalise to list of path strings
+    if not isinstance(video_files, list):
+        video_files = [video_files]
+    paths = [f if isinstance(f, str) else f.name for f in video_files]
 
-    cfg = load_config()
-    cfg["export"]["format"] = fmt
-    cfg["slide_detection"]["slide_change_threshold"] = scene_threshold
-    cfg["slide_detection"]["ssim_merge_threshold"] = ssim_threshold
-    # Whisper language: map display name → code (None = auto)
-    cfg["stt"]["language"] = WHISPER_CODE_MAP.get(whisper_lang, "auto") or "auto"
+    cfg = _build_cfg(fmt, scene_threshold, ssim_threshold, whisper_lang)
+    total = len(paths)
+    collected: list[str] = []   # output files to zip
+    status_lines: list[str] = []
 
-    try:
-        from stages import stage1_segment, stage2_pdf, stage3_audio
-        from stages import stage4_stt, stage5_match, stage6_export
+    from stages import stage1_segment, stage2_pdf, stage3_audio
+    from stages import stage4_stt, stage5_match, stage6_export
 
-        from pathlib import Path as _Path
-        is_audio = _Path(video_path).suffix.lower() in AUDIO_EXTS
+    for idx, video_path in enumerate(paths, 1):
+        stem = Path(video_path).stem
+        is_audio = Path(video_path).suffix.lower() in AUDIO_EXTS
+        desc_prefix = f"[{idx}/{total}] {Path(video_path).name}"
 
-        progress(0.00, desc="Starting…")
+        try:
+            progress((idx - 1) / total, desc=f"{desc_prefix} — starting…")
 
-        if is_audio:
-            slides = []
-            pdf_path = None
-            wav_path = video_path                      # skip Stage 3
-            progress(0.10, desc="Audio input — skipping slide detection")
-        else:
-            progress(0.05, desc="Stage 1/6 — Detecting slide transitions")
-            slides = stage1_segment.run(video_path, cfg)
+            if is_audio:
+                slides, pdf_path, wav_path = [], None, video_path
+                progress((idx - 0.7) / total, desc=f"{desc_prefix} — audio input, skipping slide detection")
+            else:
+                progress((idx - 0.9) / total, desc=f"{desc_prefix} — Stage 1 slide detection")
+                slides = stage1_segment.run(video_path, cfg)
+                progress((idx - 0.75) / total, desc=f"{desc_prefix} — Stage 2 slide PDF")
+                pdf_path = stage2_pdf.run(slides, cfg, stem=stem)
+                progress((idx - 0.6) / total, desc=f"{desc_prefix} — Stage 3 audio extraction")
+                wav_path = stage3_audio.run(video_path, cfg)
 
-            progress(0.25, desc="Stage 2/6 — Exporting slide PDF")
-            pdf_path = stage2_pdf.run(slides, cfg, stem=stem)
+            progress((idx - 0.5) / total, desc=f"{desc_prefix} — Stage 4 Whisper STT…")
+            segments = stage4_stt.run(wav_path, cfg)
 
-            progress(0.35, desc="Stage 3/6 — Extracting audio")
-            wav_path = stage3_audio.run(video_path, cfg)
+            progress((idx - 0.2) / total, desc=f"{desc_prefix} — Stage 5 matching")
+            matched = stage5_match.run(slides, segments)
 
-        progress(0.45, desc="Stage 4/6 — Transcribing with Whisper (this may take a while…)")
-        segments = stage4_stt.run(wav_path, cfg)
+            progress((idx - 0.1) / total, desc=f"{desc_prefix} — Stage 6 note export")
+            note_path = stage6_export.run(matched, cfg, stem=stem)
 
-        progress(0.82, desc="Stage 5/6 — Matching timestamps")
-        matched = stage5_match.run(slides, segments)
+            out_dir = cfg["paths"]["output_dir"]
+            transcript_path = os.path.join(out_dir, f"{stem}-transcript.txt")
 
-        progress(0.92, desc="Stage 6/6 — Generating note")
-        note_path = stage6_export.run(matched, cfg, stem=stem)
+            for p in [note_path, pdf_path, transcript_path]:
+                if p and os.path.isfile(p):
+                    collected.append(p)
 
-        progress(1.00, desc="Done!")
+            status_lines.append(
+                f"✓ {Path(video_path).name}  →  {len(slides)} slides / {len(segments)} segs"
+            )
 
-        out_dir = cfg["paths"]["output_dir"]
-        transcript_path = os.path.join(out_dir, f"{stem}-transcript.txt")
-        msg = t("done_msg", lang).format(
-            slides=len(slides), segs=len(segments),
-            note=note_path, pdf=pdf_path,
-            transcript=transcript_path, slides_dir=out_dir,
-        )
-        return msg, note_path, pdf_path, transcript_path
-    except Exception as e:
-        return t("error_prefix", lang) + str(e), None, None, None
+        except Exception as e:
+            status_lines.append(f"✗ {Path(video_path).name}  ERROR: {e}")
+
+    progress(1.0, desc="Done!")
+
+    # Pack all outputs into a single ZIP
+    if not collected:
+        return "\n".join(status_lines), None
+
+    tmp = tempfile.NamedTemporaryFile(suffix=".zip", delete=False)
+    with zipfile.ZipFile(tmp.name, "w", zipfile.ZIP_DEFLATED) as zf:
+        for p in collected:
+            zf.write(p, arcname=os.path.basename(p))
+
+    return "\n".join(status_lines), tmp.name
 
 
 def build_ui() -> gr.Blocks:
@@ -92,7 +120,7 @@ def build_ui() -> gr.Blocks:
     default_whisper = "Auto-detect"
 
     with gr.Blocks(title="SlideScribe") as demo:
-        # ── UI language toggle (top-right) ───────────────────────────
+        # ── UI language toggle ───────────────────────────────────────
         with gr.Row():
             gr.Markdown("## SlideScribe")
             ui_lang = gr.Radio(
@@ -102,15 +130,16 @@ def build_ui() -> gr.Blocks:
                 scale=0,
             )
 
-        title_md   = gr.Markdown(t("subtitle", "ko"))
+        title_md = gr.Markdown(t("subtitle", "ko"))
 
         with gr.Row():
             with gr.Column(scale=2):
                 video_input = gr.File(
                     label=t("upload_label", "ko"),
+                    file_count="multiple",
                     file_types=[
-                        ".mp4", ".avi", ".mkv", ".mov", ".webm",   # video
-                        ".mp3", ".wav", ".m4a", ".aac", ".flac",   # audio
+                        ".mp4", ".avi", ".mkv", ".mov", ".webm",
+                        ".mp3", ".wav", ".m4a", ".aac", ".flac",
                     ],
                 )
                 fmt_radio = gr.Radio(
@@ -138,16 +167,13 @@ def build_ui() -> gr.Blocks:
                 )
 
         run_btn = gr.Button(t("run_btn", "ko"), variant="primary")
-        status_box = gr.Textbox(label=t("status_label", "ko"), lines=4, interactive=False)
+        status_box = gr.Textbox(label=t("status_label", "ko"), lines=6, interactive=False)
+        zip_out = gr.File(label="결과 다운로드 (ZIP)")
 
-        with gr.Row():
-            note_out       = gr.File(label=t("note_label", "ko"))
-            pdf_out        = gr.File(label=t("pdf_label", "ko"))
-            transcript_out = gr.File(label=t("transcript_label", "ko"))
-
-        # ── UI language switch updates all labels ────────────────────
+        # ── UI language switch ───────────────────────────────────────
         def _switch_lang(lang_choice):
             lang = "en" if lang_choice == "English" else "ko"
+            dl_label = "Download results (ZIP)" if lang == "en" else "결과 다운로드 (ZIP)"
             return (
                 t("subtitle", lang),
                 gr.update(label=t("upload_label", lang)),
@@ -158,9 +184,7 @@ def build_ui() -> gr.Blocks:
                 gr.update(label=t("merge_label", lang)),
                 gr.update(value=t("run_btn", lang)),
                 gr.update(label=t("status_label", lang)),
-                gr.update(label=t("note_label", lang)),
-                gr.update(label=t("pdf_label", lang)),
-                gr.update(label=t("transcript_label", lang)),
+                gr.update(label=dl_label),
             )
 
         ui_lang.change(
@@ -169,14 +193,14 @@ def build_ui() -> gr.Blocks:
             outputs=[
                 title_md, video_input, fmt_radio, whisper_dd,
                 params_md, scene_slider, ssim_slider,
-                run_btn, status_box, note_out, pdf_out, transcript_out,
+                run_btn, status_box, zip_out,
             ],
         )
 
         run_btn.click(
             fn=_run_for_gradio,
             inputs=[video_input, fmt_radio, scene_slider, ssim_slider, whisper_dd, ui_lang],
-            outputs=[status_box, note_out, pdf_out, transcript_out],
+            outputs=[status_box, zip_out],
         )
 
     return demo

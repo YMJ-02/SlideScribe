@@ -115,9 +115,12 @@ def run_pipeline(input_path: str, cfg: dict) -> dict:
 
 def main():
     parser = argparse.ArgumentParser(
-        description="SlideScribe: turn a lecture video (or audio) into a structured note"
+        description="SlideScribe: turn lecture videos (or audio) into structured notes"
     )
-    parser.add_argument("video", help="path to the input video or audio file")
+    parser.add_argument(
+        "videos", nargs="+",
+        help="one or more video/audio file paths (glob patterns expanded by shell)"
+    )
     parser.add_argument(
         "--config", default="config.yaml", metavar="PATH",
         help="path to config.yaml (default: config.yaml)"
@@ -129,18 +132,34 @@ def main():
     args = parser.parse_args()
 
     cfg = load_config(args.config)
-
     if args.format:
         cfg["export"]["format"] = args.format
 
-    try:
-        run_pipeline(args.video, cfg)
-    except FileNotFoundError as e:
-        print(f"\n[Error] {e}", file=sys.stderr)
-        sys.exit(1)
-    except KeyboardInterrupt:
-        print("\n[Interrupted] Pipeline stopped by user.")
-        sys.exit(0)
+    total = len(args.videos)
+    failed: list[str] = []
+
+    for i, video in enumerate(args.videos, 1):
+        print(f"\n{'#'*55}")
+        print(f"  Processing {i} / {total}: {video}")
+        print(f"{'#'*55}")
+        try:
+            run_pipeline(video, cfg)
+        except FileNotFoundError as e:
+            print(f"\n[Error] {e}", file=sys.stderr)
+            failed.append(video)
+        except KeyboardInterrupt:
+            print("\n[Interrupted] Batch stopped by user.")
+            sys.exit(0)
+        except Exception as e:
+            print(f"\n[Error] {video}: {e}", file=sys.stderr)
+            failed.append(video)
+
+    if total > 1:
+        print(f"\n{'='*55}")
+        print(f" Batch done: {total - len(failed)}/{total} succeeded")
+        if failed:
+            print(f" Failed: {', '.join(failed)}")
+        print("="*55)
 
 
 if __name__ == "__main__":
