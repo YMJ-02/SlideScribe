@@ -1,6 +1,6 @@
-"""Gradio UI 진입점: python app.py
+"""Gradio UI entry point: python app.py
 
-localhost에서 강의 노트 생성 UI 실행.
+Runs the SlideScribe note generation UI on localhost.
 """
 
 import os
@@ -18,15 +18,15 @@ def _run_for_gradio(
     ssim_threshold: float,
     progress=gr.Progress(track_tqdm=True),
 ) -> tuple[str, str, str]:
-    """Gradio 버튼 클릭 핸들러.
+    """Gradio button click handler.
 
     Returns:
-        (상태 메시지, 강의노트 파일 경로, 슬라이드PDF 파일 경로)
+        (status message, note file path, slide PDF path, transcript path)
     """
     if video_file is None:
-        return "영상 파일을 업로드해 주세요.", None, None
+        return "영상 파일을 업로드해 주세요.", None, None, None
 
-    # gr.File은 버전에 따라 경로 문자열 또는 객체를 반환
+    # gr.File returns a path string or object depending on Gradio version
     video_path = video_file if isinstance(video_file, str) else video_file.name
 
     cfg = load_config()
@@ -61,7 +61,7 @@ def build_ui() -> gr.Blocks:
     default_ssim = sd.get("ssim_merge_threshold", 0.85)
     default_fmt = cfg.get("export", {}).get("format", "html")
 
-    with gr.Blocks(title="lecture-note-gen") as demo:
+    with gr.Blocks(title="SlideScribe") as demo:
         gr.Markdown("# 강의 노트 자동 생성\n영상을 업로드하면 슬라이드 세그멘테이션 + STT → 강의 노트를 생성합니다.")
 
         with gr.Row():
