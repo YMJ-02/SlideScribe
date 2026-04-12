@@ -4,11 +4,11 @@ Runs the SlideScribe note generation UI on localhost.
 """
 
 import os
-import sys
 import yaml
 import gradio as gr
 
 from run import load_config, run_pipeline
+from i18n import t, WHISPER_DISPLAY_NAMES, WHISPER_CODE_MAP
 
 
 def _run_for_gradio(
@@ -16,15 +16,14 @@ def _run_for_gradio(
     fmt: str,
     scene_threshold: float,
     ssim_threshold: float,
+    whisper_lang: str,
+    ui_lang: str,
     progress=gr.Progress(track_tqdm=True),
 ) -> tuple[str, str, str, str]:
-    """Gradio button click handler.
+    lang = "en" if ui_lang == "English" else "ko"
 
-    Returns:
-        (status message, note file path, slide PDF path, transcript path)
-    """
     if video_file is None:
-        return "영상 파일을 업로드해 주세요.", None, None, None
+        return t("error_no_file", lang), None, None, None
 
     video_path = video_file if isinstance(video_file, str) else video_file.name
 
@@ -32,6 +31,8 @@ def _run_for_gradio(
     cfg["export"]["format"] = fmt
     cfg["slide_detection"]["slide_change_threshold"] = scene_threshold
     cfg["slide_detection"]["ssim_merge_threshold"] = ssim_threshold
+    # Whisper language: map display name → code (None = auto)
+    cfg["stt"]["language"] = WHISPER_CODE_MAP.get(whisper_lang, "auto") or "auto"
 
     try:
         from stages import stage1_segment, stage2_pdf, stage3_audio
@@ -61,15 +62,14 @@ def _run_for_gradio(
 
         out_dir = cfg["paths"]["output_dir"]
         transcript_path = os.path.join(out_dir, "transcript.txt")
-        msg = (
-            f"완료!  슬라이드 {len(slides)}개 / STT 세그먼트 {len(segments)}개\n"
-            f"강의 노트: {note_path}\n"
-            f"슬라이드 PDF: {pdf_path}\n"
-            f"트랜스크립트: {transcript_path}  |  슬라이드 이미지: {out_dir}/slides/"
+        msg = t("done_msg", lang).format(
+            slides=len(slides), segs=len(segments),
+            note=note_path, pdf=pdf_path,
+            transcript=transcript_path, slides_dir=out_dir,
         )
         return msg, note_path, pdf_path, transcript_path
     except Exception as e:
-        return f"오류 발생:\n{e}", None, None, None
+        return t("error_prefix", lang) + str(e), None, None, None
 
 
 def build_ui() -> gr.Blocks:
@@ -78,47 +78,90 @@ def build_ui() -> gr.Blocks:
     default_threshold = sd.get("slide_change_threshold", 0.90)
     default_ssim = sd.get("ssim_merge_threshold", 0.85)
     default_fmt = cfg.get("export", {}).get("format", "html")
+    default_whisper = "Auto-detect"
 
     with gr.Blocks(title="SlideScribe") as demo:
-        gr.Markdown("# 강의 노트 자동 생성\n영상을 업로드하면 슬라이드 세그멘테이션 + STT → 강의 노트를 생성합니다.")
+        # ── UI language toggle (top-right) ───────────────────────────
+        with gr.Row():
+            gr.Markdown("## SlideScribe")
+            ui_lang = gr.Radio(
+                choices=["한국어", "English"],
+                value="한국어",
+                label="UI Language",
+                scale=0,
+            )
+
+        title_md   = gr.Markdown(t("subtitle", "ko"))
 
         with gr.Row():
             with gr.Column(scale=2):
                 video_input = gr.File(
-                    label="강의 영상 업로드",
+                    label=t("upload_label", "ko"),
                     file_types=[".mp4", ".avi", ".mkv", ".mov", ".webm"],
                 )
                 fmt_radio = gr.Radio(
                     choices=["html", "pdf", "markdown"],
                     value=default_fmt,
-                    label="출력 포맷",
+                    label=t("format_label", "ko"),
+                )
+                whisper_dd = gr.Dropdown(
+                    choices=WHISPER_DISPLAY_NAMES,
+                    value=default_whisper,
+                    label=t("whisper_label", "ko"),
                 )
 
             with gr.Column(scale=1):
-                gr.Markdown("### 슬라이드 감지 파라미터")
+                params_md = gr.Markdown(t("params_header", "ko"))
                 scene_slider = gr.Slider(
                     minimum=0.70, maximum=0.99, step=0.01,
                     value=default_threshold,
-                    label="슬라이드 전환 감도 (낮을수록 더 많이 감지)",
+                    label=t("threshold_label", "ko"),
                 )
                 ssim_slider = gr.Slider(
                     minimum=0.5, maximum=1.0, step=0.01,
                     value=default_ssim,
-                    label="ssim_merge_threshold (높을수록 적극 병합)",
+                    label=t("merge_label", "ko"),
                 )
 
-        run_btn = gr.Button("노트 생성 시작", variant="primary")
-
-        status_box = gr.Textbox(label="진행 상황 / 결과", lines=4, interactive=False)
+        run_btn = gr.Button(t("run_btn", "ko"), variant="primary")
+        status_box = gr.Textbox(label=t("status_label", "ko"), lines=4, interactive=False)
 
         with gr.Row():
-            note_out       = gr.File(label="강의 노트 다운로드")
-            pdf_out        = gr.File(label="슬라이드 PDF 다운로드")
-            transcript_out = gr.File(label="트랜스크립트 다운로드 (transcript.txt)")
+            note_out       = gr.File(label=t("note_label", "ko"))
+            pdf_out        = gr.File(label=t("pdf_label", "ko"))
+            transcript_out = gr.File(label=t("transcript_label", "ko"))
+
+        # ── UI language switch updates all labels ────────────────────
+        def _switch_lang(lang_choice):
+            lang = "en" if lang_choice == "English" else "ko"
+            return (
+                t("subtitle", lang),
+                gr.update(label=t("upload_label", lang)),
+                gr.update(label=t("format_label", lang)),
+                gr.update(label=t("whisper_label", lang)),
+                t("params_header", lang),
+                gr.update(label=t("threshold_label", lang)),
+                gr.update(label=t("merge_label", lang)),
+                gr.update(value=t("run_btn", lang)),
+                gr.update(label=t("status_label", lang)),
+                gr.update(label=t("note_label", lang)),
+                gr.update(label=t("pdf_label", lang)),
+                gr.update(label=t("transcript_label", lang)),
+            )
+
+        ui_lang.change(
+            fn=_switch_lang,
+            inputs=[ui_lang],
+            outputs=[
+                title_md, video_input, fmt_radio, whisper_dd,
+                params_md, scene_slider, ssim_slider,
+                run_btn, status_box, note_out, pdf_out, transcript_out,
+            ],
+        )
 
         run_btn.click(
             fn=_run_for_gradio,
-            inputs=[video_input, fmt_radio, scene_slider, ssim_slider],
+            inputs=[video_input, fmt_radio, scene_slider, ssim_slider, whisper_dd, ui_lang],
             outputs=[status_box, note_out, pdf_out, transcript_out],
         )
 

@@ -8,7 +8,7 @@ stt:
   model_name: "large-v3"
   device: "cuda"
   compute_type: "float16"
-  language: "ko"
+  language: "auto"   # auto | ko | en | ja | zh | fr | de | es | pt | ru
   beam_size: 5
   batch_size: 8
 

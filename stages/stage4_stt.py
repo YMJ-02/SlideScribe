@@ -84,7 +84,9 @@ def run(wav_path: str, cfg: dict | None = None) -> list[dict]:
     model_name: str = stt_cfg["model_name"]
     device: str = stt_cfg["device"]
     compute_type: str = stt_cfg["compute_type"]
-    language: str = stt_cfg["language"]
+    language_cfg: str = stt_cfg.get("language", "auto")
+    # "auto" → None (faster-whisper auto-detect)
+    language: str | None = None if language_cfg == "auto" else language_cfg
     beam_size: int = stt_cfg["beam_size"]
     batch_size: int = stt_cfg.get("batch_size", 1)
 
@@ -92,31 +94,21 @@ def run(wav_path: str, cfg: dict | None = None) -> list[dict]:
 
     model = _load_model(model_name, device, compute_type)
 
+    transcribe_kwargs = dict(language=language, beam_size=beam_size)
+
     if batch_size > 1:
         try:
             from faster_whisper import BatchedInferencePipeline
             pipeline = BatchedInferencePipeline(model=model)
             print(f"[Stage 4] BatchedInferencePipeline 사용 (batch_size={batch_size})")
             raw_segments, info = pipeline.transcribe(
-                wav_path,
-                language=language,
-                beam_size=beam_size,
-                batch_size=batch_size,
+                wav_path, batch_size=batch_size, **transcribe_kwargs,
             )
         except (ImportError, TypeError):
-            # 구버전 faster-whisper: BatchedInferencePipeline 미지원
             print("[Stage 4] BatchedInferencePipeline 미지원 → 일반 모드로 fallback")
-            raw_segments, info = model.transcribe(
-                wav_path,
-                language=language,
-                beam_size=beam_size,
-            )
+            raw_segments, info = model.transcribe(wav_path, **transcribe_kwargs)
     else:
-        raw_segments, info = model.transcribe(
-            wav_path,
-            language=language,
-            beam_size=beam_size,
-        )
+        raw_segments, info = model.transcribe(wav_path, **transcribe_kwargs)
 
     print(f"[Stage 4] 감지 언어: {info.language}  (확률 {info.language_probability:.2%})")
     print("[Stage 4] 전사 중...")
