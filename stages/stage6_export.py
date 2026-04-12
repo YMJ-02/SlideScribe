@@ -310,9 +310,9 @@ def _export_pdf(matched: list[dict], out_path: str) -> None:
 
 # ── 항상 생성되는 독립 출력물 ──────────────────────────────────
 
-def _export_transcript(matched: list[dict], out_dir: str) -> str:
-    """타임스탬프 포함 전체 텍스트를 transcript.txt로 저장."""
-    out_path = os.path.join(out_dir, "transcript.txt")
+def _export_transcript(matched: list[dict], out_dir: str, stem: str = "lecture_note") -> str:
+    """타임스탬프 포함 전체 텍스트를 <stem>-transcript.txt로 저장."""
+    out_path = os.path.join(out_dir, f"{stem}-transcript.txt")
     lines = []
     for slide in matched:
         t_s = _fmt_time(slide["t_start"])
@@ -344,12 +344,13 @@ def _export_slide_images(matched: list[dict], out_dir: str) -> str:
 
 # ── 메인 진입점 ─────────────────────────────────────────────────
 
-def run(matched: list[dict], cfg: dict | None = None) -> str:
+def run(matched: list[dict], cfg: dict | None = None, stem: str = "lecture_note") -> str:
     """강의 노트 파일 생성.
 
     Args:
         matched: Stage 5 출력
         cfg:     config.yaml dict
+        stem:    출력 파일명 기반 (입력 영상 stem). e.g. "lecture_week3"
 
     Returns:
         생성된 파일 경로
@@ -362,12 +363,12 @@ def run(matched: list[dict], cfg: dict | None = None) -> str:
     out_dir: str = cfg["paths"]["output_dir"]
     Path(out_dir).mkdir(parents=True, exist_ok=True)
 
-    transcript_path = _export_transcript(matched, out_dir)
+    transcript_path = _export_transcript(matched, out_dir, stem=stem)
     slides_dir = _export_slide_images(matched, out_dir)
 
     ext_map = {"html": "html", "pdf": "pdf", "markdown": "md"}
     ext = ext_map.get(fmt, "html")
-    out_path = os.path.join(out_dir, f"lecture_note.{ext}")
+    out_path = os.path.join(out_dir, f"{stem}-note.{ext}")
 
     print(f"[Stage 6] 강의 노트 생성 중 (포맷: {fmt})")
 

@@ -18,12 +18,13 @@ def _load_config(config_path: str = "config.yaml") -> dict:
         return yaml.safe_load(f)
 
 
-def run(slides: list[dict], cfg: dict | None = None) -> str:
+def run(slides: list[dict], cfg: dict | None = None, stem: str = "lecture_note") -> str:
     """슬라이드 프레임들을 A4 가로 PDF로 묶기.
 
     Args:
         slides: Stage 1 출력 list[dict]
         cfg:    config.yaml dict
+        stem:   출력 파일명 기반 (입력 영상 stem). e.g. "lecture_week3"
 
     Returns:
         생성된 PDF 파일의 절대 경로
@@ -44,10 +45,9 @@ def run(slides: list[dict], cfg: dict | None = None) -> str:
             print(f"  [경고] 프레임 파일 없음: {frame_path} → 스킵")
             continue
         pdf.add_page()
-        # A4 가로 여백 없이 꽉 채우기
         pdf.image(frame_path, x=0, y=0, w=297, h=210)
 
-    out_path = os.path.join(out_dir, "slides.pdf")
+    out_path = os.path.join(out_dir, f"{stem}-slides.pdf")
     pdf.output(out_path)
     print(f"[Stage 2] 저장 완료: {out_path}")
     return out_path

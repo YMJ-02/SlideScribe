@@ -26,6 +26,8 @@ def _run_for_gradio(
         return t("error_no_file", lang), None, None, None
 
     video_path = video_file if isinstance(video_file, str) else video_file.name
+    from pathlib import Path as _Path
+    stem = _Path(video_path).stem
 
     cfg = load_config()
     cfg["export"]["format"] = fmt
@@ -44,7 +46,7 @@ def _run_for_gradio(
         slides = stage1_segment.run(video_path, cfg)
 
         progress(0.25, desc="Stage 2/6 — Exporting slide PDF")
-        pdf_path = stage2_pdf.run(slides, cfg)
+        pdf_path = stage2_pdf.run(slides, cfg, stem=stem)
 
         progress(0.35, desc="Stage 3/6 — Extracting audio")
         wav_path = stage3_audio.run(video_path, cfg)
@@ -56,12 +58,12 @@ def _run_for_gradio(
         matched = stage5_match.run(slides, segments)
 
         progress(0.92, desc="Stage 6/6 — Generating note")
-        note_path = stage6_export.run(matched, cfg)
+        note_path = stage6_export.run(matched, cfg, stem=stem)
 
         progress(1.00, desc="Done!")
 
         out_dir = cfg["paths"]["output_dir"]
-        transcript_path = os.path.join(out_dir, "transcript.txt")
+        transcript_path = os.path.join(out_dir, f"{stem}-transcript.txt")
         msg = t("done_msg", lang).format(
             slides=len(slides), segs=len(segments),
             note=note_path, pdf=pdf_path,

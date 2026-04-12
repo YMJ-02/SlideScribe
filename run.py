@@ -33,6 +33,9 @@ def run_pipeline(video_path: str, cfg: dict) -> dict:
     if not os.path.isfile(video_path):
         raise FileNotFoundError(f"영상 파일을 찾을 수 없습니다: {video_path}")
 
+    from pathlib import Path as _Path
+    stem = _Path(video_path).stem   # e.g. "lecture_week3"
+
     t0 = time.time()
     results = {}
 
@@ -47,7 +50,7 @@ def run_pipeline(video_path: str, cfg: dict) -> dict:
     print("\n" + "="*55)
     print(" Stage 2 / 6  Slide PDF")
     print("="*55)
-    pdf_path = stage2_pdf.run(slides, cfg)
+    pdf_path = stage2_pdf.run(slides, cfg, stem=stem)
     results["slides_pdf"] = pdf_path
 
     # ── Stage 3: Audio Extraction ────────────────────────────────────
@@ -75,7 +78,7 @@ def run_pipeline(video_path: str, cfg: dict) -> dict:
     print("\n" + "="*55)
     print(" Stage 6 / 6  Note Export")
     print("="*55)
-    note_path = stage6_export.run(matched, cfg)
+    note_path = stage6_export.run(matched, cfg, stem=stem)
     results["note"] = note_path
 
     elapsed = time.time() - t0
