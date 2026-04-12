@@ -2,9 +2,10 @@
 
 matched 데이터(Stage 5 출력)를 HTML / PDF / Markdown으로 출력.
 HTML: 이미지 base64 임베드 → 단일 파일로 배포 가능.
-      레이아웃: 좌측 슬라이드 | 우측 스크립트 (2열)
+      페이지 크기: A4 가로(297mm) + 1/3(99mm) × A4 세로(210mm)
+      슬라이드 영역(3) | 스크립트 영역(1) — 한 페이지 고정
 PDF:  fpdf2 기반, 한국어 폰트 자동 탐색.
-      레이아웃: 좌측 슬라이드 | 우측 스크립트 (A4 가로)
+      총 폭 396mm × 210mm 레이아웃
 Markdown: 이미지 파일 경로 참조.
 
 입력: matched: list[dict]  (Stage 5 출력 — idx, t_start, t_end, frame_path, text)
@@ -41,85 +42,129 @@ def _img_to_b64(path: str) -> str:
 
 # ── HTML 내보내기 ─────────────────────────────────────────────────
 
+# A4 가로: 297mm × 210mm
+# 스크립트 열: 297/3 ≈ 99mm 우측에 추가
+# 총 페이지: 396mm × 210mm (1mm ≈ 3.7795px)
+_PAGE_W_PX  = 1496   # 396mm
+_PAGE_H_PX  = 794    # 210mm
+
 _HTML_STYLE = """
-  * { box-sizing: border-box; }
-  body {
+  * {{ box-sizing: border-box; margin: 0; padding: 0; }}
+
+  body {{
     font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
-    max-width: 1200px; margin: 0 auto; padding: 24px;
-    background: #f5f5f5; color: #222;
-  }
-  h1 { text-align: center; color: #1a1a2e; margin-bottom: 40px; }
+    background: #e8e8e8;
+    padding: 32px 24px;
+    color: #222;
+  }}
 
-  /* 슬라이드 하나 = 카드 */
-  .slide-section {
-    background: #fff;
-    border: 1px solid #e0e0e0;
-    border-radius: 8px;
-    padding: 16px 20px;
+  h1 {{
+    text-align: center;
+    color: #1a1a2e;
     margin-bottom: 32px;
-    box-shadow: 0 2px 6px rgba(0,0,0,.06);
-  }
+    font-size: 1.1em;
+    letter-spacing: 0.05em;
+  }}
 
-  /* 헤더 줄 (Slide N + 타임코드) */
-  .slide-header {
+  /* 한 페이지 = A4가로(297mm) + 1/3(99mm) × A4세로(210mm) */
+  .note-page {{
+    width: {w}px;
+    height: {h}px;
+    background: #fff;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.12);
+    margin: 0 auto 40px auto;
+    display: grid;
+    grid-template-rows: 32px 1fr;
+    overflow: hidden;
+  }}
+
+  /* 상단 헤더 바 */
+  .page-header {{
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 12px;
-    padding-bottom: 8px;
-    border-bottom: 1px solid #ececec;
-  }
-  .slide-num  { font-size: 1.05em; font-weight: bold; color: #1a1a2e; }
-  .slide-time { font-size: 0.88em; color: #888; }
+    padding: 0 16px;
+    background: #1a1a2e;
+    color: #fff;
+  }}
+  .page-header .slide-num  {{ font-size: 0.73em; font-weight: bold; letter-spacing: 0.04em; }}
+  .page-header .slide-time {{ font-size: 0.70em; color: #aab; }}
 
-  /* 주 콘텐츠: 좌(슬라이드) + 우(스크립트) */
-  .slide-body {
+  /* 본문: 슬라이드(3) + 스크립트(1) */
+  .page-body {{
     display: grid;
-    grid-template-columns: 3fr 1.3fr;
-    gap: 20px;
-    align-items: start;
-  }
+    grid-template-columns: 3fr 1fr;
+    overflow: hidden;
+  }}
 
-  /* 좌측 슬라이드 영역 */
-  .slide-panel img {
-    width: 100%;
-    height: auto;
+  /* 좌측 슬라이드 */
+  .slide-panel {{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f8f8f8;
+    padding: 10px;
+    overflow: hidden;
+  }}
+  .slide-panel img {{
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
     display: block;
     border: 1px solid #ddd;
-    border-radius: 4px;
-  }
+  }}
 
-  /* 우측 스크립트 영역 */
-  .transcript-panel {
-    border-left: 2px solid #e8e8e8;
-    padding-left: 16px;
-    min-height: 60px;
-  }
-  .transcript-label {
-    font-size: 0.78em;
+  /* 우측 스크립트 */
+  .transcript-panel {{
+    border-left: 2px solid #e0e0e0;
+    padding: 10px 12px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+  }}
+  .transcript-label {{
+    font-size: 0.62em;
     font-weight: bold;
-    color: #999;
+    color: #bbb;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
-    margin-bottom: 8px;
-  }
-  .transcript {
-    line-height: 1.85;
-    font-size: 0.93em;
+    letter-spacing: 0.07em;
+    margin-bottom: 5px;
+    flex-shrink: 0;
+    border-bottom: 1px solid #f0f0f0;
+    padding-bottom: 4px;
+  }}
+  .transcript {{
+    font-size: 0.70em;
+    line-height: 1.65;
     white-space: pre-wrap;
     color: #333;
-  }
-  .no-text { color: #bbb; font-style: italic; font-size: 0.88em; }
+    overflow: hidden;
+    flex: 1;
+  }}
+  .no-text {{ color: #ccc; font-style: italic; font-size: 0.68em; }}
 
-  /* 맸 끄 인쇄 시: 하나당 새 페이지 */
-  @media print {
-    .slide-section { page-break-after: always; box-shadow: none; }
-  }
-"""
+  /* 인쇄: 슬라이드당 새 페이지 */
+  @media print {{
+    body {{ background: #fff; padding: 0; }}
+    h1 {{ display: none; }}
+    .note-page {{
+      width: 396mm;
+      height: 210mm;
+      page-break-after: always;
+      box-shadow: none;
+      border: none;
+      margin: 0;
+      border-radius: 0;
+    }}
+  }}
+""".format(w=_PAGE_W_PX, h=_PAGE_H_PX)
 
 
 def _export_html(matched: list[dict], out_path: str) -> None:
-    sections = []
+    pages = []
     for slide in matched:
         t_s = _fmt_time(slide["t_start"])
         t_e = _fmt_time(slide["t_end"])
@@ -130,13 +175,13 @@ def _export_html(matched: list[dict], out_path: str) -> None:
             if text else
             '<div class="transcript no-text">(해당 구간 음성 없음)</div>'
         )
-        sections.append(f"""
-  <div class="slide-section">
-    <div class="slide-header">
+        pages.append(f"""
+  <div class="note-page">
+    <div class="page-header">
       <span class="slide-num">슬라이드 {slide['idx'] + 1}</span>
       <span class="slide-time">{t_s} ~ {t_e}</span>
     </div>
-    <div class="slide-body">
+    <div class="page-body">
       <div class="slide-panel">
         <img src="data:image/jpeg;base64,{b64}" alt="슬라이드 {slide['idx']+1}">
       </div>
@@ -157,7 +202,7 @@ def _export_html(matched: list[dict], out_path: str) -> None:
 </head>
 <body>
   <h1>강의 노트</h1>
-{''.join(sections)}
+{''.join(pages)}
 </body>
 </html>"""
 
@@ -201,61 +246,64 @@ def _find_korean_font() -> str | None:
 
 
 def _export_pdf(matched: list[dict], out_path: str) -> None:
-    """A4 가로(landscape) 기준: 좌측 슬라이드 / 우측 스크립트."""
+    """A4 가로 기준 + 1/3 추가 폭: 좌측 슬라이드(297mm) / 우측 스크립트(99mm)."""
     from fpdf import FPDF
 
-    # 가로 A4: 297 × 210 mm
-    pdf = FPDF(orientation="L", unit="mm", format="A4")
-    pdf.set_auto_page_break(auto=True, margin=10)
+    # 코사 지정 페이지: 396mm × 210mm
+    pdf = FPDF(unit="mm")
+    pdf.set_auto_page_break(auto=False)
 
     font_path = _find_korean_font()
     if font_path:
         pdf.add_font("Korean", "", font_path)
         body_font = "Korean"
     else:
-        print("[Stage 6] 한국어 폴트를 찾지 못했습니다. 텍스트가 깨질 수 있습니다.")
+        print("[Stage 6] 한국어 폰트를 찾지 못했습니다. 텍스트가 깨질 수 있습니다.")
         body_font = "Helvetica"
 
     # 레이아웃 상수 (mm)
-    PAGE_W, PAGE_H = 297, 210
-    MARGIN = 10
-    SLIDE_W = 190          # 좌측 슬라이드 열 폭
-    SCRIPT_X = MARGIN + SLIDE_W + 6   # 우측 스크립트 시작 X
-    SCRIPT_W = PAGE_W - SCRIPT_X - MARGIN  # 우측 열 폭
+    PAGE_W  = 396   # A4가로(297) + 1/3(99)
+    PAGE_H  = 210   # A4 세로
+    MARGIN  = 8
+    HDR_H   = 7     # 헤더 롭
+    SLIDE_W = 277   # 297 - 2*margin = 281 중 슬라이드에 할당
+    SLIDE_H = SLIDE_W * 9 / 16
+    DIV_X   = MARGIN + SLIDE_W + 4   # 구분선 X
+    SCRIPT_X = DIV_X + 4
+    SCRIPT_W = PAGE_W - SCRIPT_X - MARGIN
+    CONTENT_Y = MARGIN + HDR_H + 2
 
     for slide in matched:
-        pdf.add_page()
+        pdf.add_page(format=(PAGE_W, PAGE_H))
 
         t_s = _fmt_time(slide["t_start"])
         t_e = _fmt_time(slide["t_end"])
-        label = f"Slide {slide['idx']+1}  [{t_s} ~ {t_e}]"
 
-        # ─ 헤더 ─
-        pdf.set_font("Helvetica", "B", 9)
-        pdf.set_xy(MARGIN, MARGIN)
-        pdf.cell(SLIDE_W, 6, label, ln=False)
-
-        pdf.set_font("Helvetica", "", 8)
-        pdf.set_xy(SCRIPT_X, MARGIN)
-        pdf.cell(SCRIPT_W, 6, "Transcript", ln=False)
-
-        y_content = MARGIN + 8  # 헤더 아래에서 콘텐츠 시작
+        # ─ 헤더 바 ─
+        pdf.set_fill_color(26, 26, 46)
+        pdf.rect(0, 0, PAGE_W, HDR_H + 2, "F")
+        pdf.set_text_color(255, 255, 255)
+        pdf.set_font("Helvetica", "B", 7)
+        pdf.set_xy(MARGIN, 1)
+        pdf.cell(SLIDE_W, 5, f"Slide {slide['idx']+1}  [{t_s} ~ {t_e}]", ln=False)
+        pdf.set_font("Helvetica", "", 6.5)
+        pdf.set_xy(SCRIPT_X, 1)
+        pdf.cell(SCRIPT_W, 5, "Transcript", ln=False)
+        pdf.set_text_color(0, 0, 0)
 
         # ─ 좌측: 슬라이드 이미지 ─
-        SLIDE_H = SLIDE_W * 9 / 16   # 16:9 비율
         if os.path.isfile(slide["frame_path"]):
-            pdf.image(slide["frame_path"], x=MARGIN, y=y_content, w=SLIDE_W)
+            pdf.image(slide["frame_path"], x=MARGIN, y=CONTENT_Y, w=SLIDE_W)
 
         # ─ 구분선 ─
-        line_x = SCRIPT_X - 3
         pdf.set_draw_color(200, 200, 200)
-        pdf.line(line_x, MARGIN, line_x, PAGE_H - MARGIN)
+        pdf.line(DIV_X, MARGIN, DIV_X, PAGE_H - MARGIN)
 
-        # ─ 우측: 스크립트 텍스트 ─
-        pdf.set_xy(SCRIPT_X, y_content)
-        pdf.set_font(body_font, size=8)
+        # ─ 우측: 스크립트 ─
+        pdf.set_xy(SCRIPT_X, CONTENT_Y)
+        pdf.set_font(body_font, size=7)
         text = slide.get("text", "").strip() or "(해당 구간 음성 없음)"
-        pdf.multi_cell(SCRIPT_W, 5, text)
+        pdf.multi_cell(SCRIPT_W, 4.2, text)
 
     pdf.output(out_path)
 
@@ -294,7 +342,7 @@ def _export_slide_images(matched: list[dict], out_dir: str) -> str:
     return slides_dir
 
 
-# ── 메인 진입점 ───────────────────────────────────────────────────
+# ── 메인 진입점 ─────────────────────────────────────────────────
 
 def run(matched: list[dict], cfg: dict | None = None) -> str:
     """강의 노트 파일 생성.
