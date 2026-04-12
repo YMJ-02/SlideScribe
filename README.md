@@ -4,10 +4,10 @@
 
 **Turn any lecture video into a structured, readable note — automatically.**
 
-[![version](https://img.shields.io/badge/version-0.1.0-blue?style=flat-square)](https://github.com/YMJ-02/lecture-note/releases)
-[![license](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
+[![version](https://img.shields.io/badge/version-0.1.0-blue?style=flat-square)](https://github.com/YMJ-02/SlideScribe/releases)
+[![license](https://img.shields.io/github/license/YMJ-02/SlideScribe?style=flat-square&color=green)](https://github.com/YMJ-02/SlideScribe/blob/master/LICENSE)
 [![python](https://img.shields.io/badge/python-3.10%2B-3776AB?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
-[![CI](https://img.shields.io/badge/CI-passing-brightgreen?style=flat-square&logo=github-actions&logoColor=white)](https://github.com/YMJ-02/lecture-note/actions)
+[![CI](https://img.shields.io/github/actions/workflow/status/YMJ-02/SlideScribe/ci.yml?branch=master&style=flat-square&label=CI&logo=github-actions&logoColor=white)](https://github.com/YMJ-02/SlideScribe/actions/workflows/ci.yml)
 
 </div>
 
@@ -22,7 +22,7 @@ Detects slide transitions, transcribes audio via Whisper, and exports a structur
 
 A sample lecture note preview file is available here:
 
-- [lecture_note_demo.html](https://github.com/YMJ-02/lecture-note/blob/master/docs/lecture_note_demo.html)
+- [lecture_note_demo.html](https://github.com/YMJ-02/SlideScribe/blob/master/docs/lecture_note_demo.html)
 
 Open the file in a browser to see the full layout with slide pages and transcript panels.
 
@@ -31,7 +31,7 @@ Open the file in a browser to see the full layout with slide pages and transcrip
 ## Project Structure
 
 ```
-lecture-note/
+SlideScribe/
 ├── app.py              # Gradio web UI entry point
 ├── run.py              # CLI entry point
 ├── config.yaml         # Configuration file
@@ -90,8 +90,8 @@ sudo apt install ffmpeg
 ### Clone and install Python dependencies
 
 ```bash
-git clone https://github.com/YMJ-02/lecture-note.git
-cd lecture-note
+git clone https://github.com/YMJ-02/SlideScribe.git
+cd SlideScribe
 pip install -r requirements.txt
 ```
 
@@ -163,25 +163,7 @@ paths:
 
 ## License
 
-MIT License.
-
-```
-Copyright (c) 2026 YMJ-02
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-provided to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
-```
+MIT License. See [LICENSE](LICENSE) for details.
 
 ---
 
@@ -190,21 +172,19 @@ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
 | Item | Detail |
 |------|--------|
 | GitHub | [@YMJ-02](https://github.com/YMJ-02) |
-| Repository | https://github.com/YMJ-02/lecture-note |
+| Repository | https://github.com/YMJ-02/SlideScribe |
 
 ---
 
 ## Bug Reports
 
-Open an issue at https://github.com/YMJ-02/lecture-note/issues.
+Open an issue at https://github.com/YMJ-02/SlideScribe/issues.
 
 When reporting a bug, include:
 - OS and Python version
 - GPU model (or CPU-only flag)
 - The exact command or UI steps used
 - Full error traceback from the terminal
-
-Common issues and fixes are listed in the FAQ section below.
 
 ---
 
@@ -262,7 +242,7 @@ A. Use a smaller model (`medium` or `small`) or switch to `device: "cpu"` with `
 
 예시 강의 노트 HTML 파일:
 
-- [lecture_note_demo.html](https://github.com/YMJ-02/lecture-note/blob/master/docs/lecture_note_demo.html)
+- [lecture_note_demo.html](https://github.com/YMJ-02/SlideScribe/blob/master/docs/lecture_note_demo.html)
 
 브라우저에서 열면 슬라이드 페이지와 우측 스크립트 패널이 포함된 전체 레이아웃을 확인할 수 있음.
 
@@ -271,7 +251,7 @@ A. Use a smaller model (`medium` or `small`) or switch to `device: "cpu"` with `
 ## 프로젝트 구성
 
 ```
-lecture-note/
+SlideScribe/
 ├── app.py              # Gradio 웹 UI 진입점
 ├── run.py              # CLI 진입점
 ├── config.yaml         # 설정 파일
@@ -331,8 +311,8 @@ sudo apt install ffmpeg
 ### 저장소 클론 및 Python 패키지 설치
 
 ```bash
-git clone https://github.com/YMJ-02/lecture-note.git
-cd lecture-note
+git clone https://github.com/YMJ-02/SlideScribe.git
+cd SlideScribe
 pip install -r requirements.txt
 ```
 
@@ -380,7 +360,7 @@ python run.py lecture.mp4 --config my_config.yaml --format pdf
 
 ```yaml
 slide_detection:
-  slide_change_threshold: 0.90   # 낮을수록 슬라이드 전환을 더 많이 감지
+  slide_change_threshold: 0.90   # 낙을수록 슬라이드 전환을 더 많이 감지
   ssim_merge_threshold: 0.85     # 높을수록 인접 슬라이드를 적극 병합
   frame_sample_rate: 1           # 초당 샘플링 프레임 수
   min_slide_sec: 3.0             # 슬라이드 최소 지속 시간 (초)
@@ -404,9 +384,7 @@ paths:
 
 ## 저작권 및 사용권 정보
 
-MIT 라이선스.
-
-개인적·상업적 용도로 자유롭게 사용, 수정, 배포 가능. 단, 원본 저작권 표시 및 라이선스 고지를 유지해야 함.
+MIT 라이선스. 자세한 내용은 [LICENSE](LICENSE) 파일 참조.
 
 ---
 
@@ -415,13 +393,13 @@ MIT 라이선스.
 | 항목 | 내용 |
 |------|------|
 | GitHub | [@YMJ-02](https://github.com/YMJ-02) |
-| 저장소 | https://github.com/YMJ-02/lecture-note |
+| 저장소 | https://github.com/YMJ-02/SlideScribe |
 
 ---
 
 ## 버그 및 디버그
 
-https://github.com/YMJ-02/lecture-note/issues 에서 이슈를 등록.
+https://github.com/YMJ-02/SlideScribe/issues 에서 이슈를 등록.
 
 버그 보고 시 아래 정보를 포함:
 - OS 및 Python 버전
@@ -446,7 +424,7 @@ https://github.com/YMJ-02/lecture-note/issues 에서 이슈를 등록.
 
 | 버전 | 날짜 | 내용 |
 |------|------|------|
-| 0.1.0 | 2026 | 최초 로컬 릴리즈. 6단계 파이프라인. Gradio UI + CLI. |
+| 0.1.0 | 2026 | 최초 로컈 릴리즈. 6단계 파이프라인. Gradio UI + CLI. |
 
 ---
 
