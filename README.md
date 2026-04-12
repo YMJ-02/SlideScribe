@@ -143,7 +143,7 @@ paths:
 MIT License.
 
 ```
-Copyright (c) 2025 YMJ-02
+Copyright (c) 2026 YMJ-02
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -200,7 +200,7 @@ Common issues and fixes are listed in the FAQ section below.
 
 | Version | Date | Notes |
 |---------|------|-------|
-| 0.1.0 | 2025 | Initial local release. 6-stage pipeline. Gradio UI + CLI. |
+| 0.1.0 | 2026 | Initial local release. 6-stage pipeline. Gradio UI + CLI. |
 
 ---
 
@@ -413,7 +413,7 @@ https://github.com/YMJ-02/lecture-note/issues 에서 이슈를 등록.
 
 | 버전 | 날짜 | 내용 |
 |------|------|------|
-| 0.1.0 | 2025 | 최초 로컬 릴리즈. 6단계 파이프라인. Gradio UI + CLI. |
+| 0.1.0 | 2026 | 최초 로컬 릴리즈. 6단계 파이프라인. Gradio UI + CLI. |
 
 ---
 
