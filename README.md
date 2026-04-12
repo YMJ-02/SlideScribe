@@ -13,8 +13,9 @@
 
 ---
 
-Automatically generates lecture notes from a video file.
-Detects slide transitions, transcribes audio via Whisper, and exports a structured note document.
+Most tools give you a raw transcript. SlideScribe gives you a structured note — each slide paired with what was actually said about it.
+
+Drop in a lecture video. Get back a paginated document with every slide matched to its spoken content, ready to read or export.
 
 ---
 
@@ -25,6 +26,22 @@ A sample lecture note preview file is available here:
 - [lecture_note_demo.html](https://github.com/YMJ-02/SlideScribe/blob/master/docs/lecture_note_demo.html)
 
 Open the file in a browser to see the full layout with slide pages and transcript panels.
+
+---
+
+## How It Works
+
+```
+Video file
+  ↓
+  Slide segmentation (SSIM-based)
+  ↓
+  Audio extraction + Whisper STT
+  ↓
+  Timestamp matching (slide ↔ transcript)
+  ↓
+  Export → HTML / PDF / Markdown
+```
 
 ---
 
@@ -45,17 +62,6 @@ SlideScribe/
 │   └── stage6_export.py    # Note generation
 ├── agent_docs/         # Internal agent documentation
 └── output/             # Generated outputs (created at runtime)
-```
-
-**Pipeline flow:**
-
-```
-Stage 1 (Segmentation)
-├─ Stage 2 (Slide PDF)
-└─ Stage 3 (Audio Extraction)
-     └─ Stage 4 (Whisper STT)
-          └─ Stage 5 (Timestamp Matching)
-               └─ Stage 6 (Note Export)
 ```
 
 ---
@@ -203,7 +209,7 @@ When reporting a bug, include:
 
 | Version | Date | Notes |
 |---------|------|-------|
-| 0.1.0 | 2026 | Initial local release. 6-stage pipeline. Gradio UI + CLI. |
+| 0.1.0 | 2026 | Initial release. 6-stage pipeline. Gradio UI + CLI. |
 
 ---
 
@@ -233,8 +239,25 @@ A. Use a smaller model (`medium` or `small`) or switch to `device: "cpu"` with `
 
 # 🎓 SlideScribe (한국어)
 
-강의 영상에서 강의 노트를 자동으로 생성합니다.
-슬라이드 전환 감지 → Whisper 음성 인식 → 구조화된 노트 문서 출력.
+대부분의 도구는 원시 트랜스크립트를 낸다. SlideScribe는 구조화된 노트를 낸다 — 각 슬라이드에 실제로 한 말이 매칭된 형태로.
+
+강의 영상을 넣으면 슬라이드마다 트랜스크립트가 연결된 페이지 형태의 노트가 자동으로 만들어집니다.
+
+---
+
+## 작동 방식
+
+```
+영상 파일
+  ↓
+  슬라이드 세그멘테이션 (SSIM 기반)
+  ↓
+  오디오 추출 + Whisper STT
+  ↓
+  타임스탬프 매칭 (슬라이드 ↔ 트랜스크립트)
+  ↓
+  내보내기 → HTML / PDF / Markdown
+```
 
 ---
 
@@ -265,17 +288,6 @@ SlideScribe/
 │   └── stage6_export.py    # 노트 생성
 ├── agent_docs/         # 내부 문서
 └── output/             # 생성된 결과물 (실행 시 자동 생성)
-```
-
-**파이프라인 흐름:**
-
-```
-Stage 1 (세그멘테이션)
-├─ Stage 2 (슬라이드 PDF)
-└─ Stage 3 (오디오 추출)
-     └─ Stage 4 (Whisper STT)
-          └─ Stage 5 (타임스탬프 매칭)
-               └─ Stage 6 (노트 생성)
 ```
 
 ---
@@ -424,7 +436,7 @@ https://github.com/YMJ-02/SlideScribe/issues 에서 이슈를 등록.
 
 | 버전 | 날짜 | 내용 |
 |------|------|------|
-| 0.1.0 | 2026 | 최초 로컈 릴리즈. 6단계 파이프라인. Gradio UI + CLI. |
+| 0.1.0 | 2026 | 최초 릴리즈. 6단계 파이프라인. Gradio UI + CLI. |
 
 ---
 
@@ -437,13 +449,13 @@ A. `pip install -r requirements.txt`를 다시 실행. 그래도 실패하면 `p
 A. `faster-whisper`는 첫 실행 시 모델을 자동 다운로드함 (모델 크기에 따라 1–3 GB). 안정적인 인터넷 연결이 필요하며, 이후 실행부터는 캐시에서 로드됨.
 
 **Q. CPU로 실행하면 너무 느림.**  
-A. `config.yaml`에서 `model_name: "small"` 또는 `"base"`로 변경하고 `compute_type: "int8"` 설정. 긴 영상에서 CPU로 large 모델 사용은 현실적으로 비실용적.
+A. `config.yaml`에서 `model_name: "small"` 또는 `"base"`로 변경하고 `compute_type: "int8"` 설정.
 
 **Q. `ffmpeg` not found 오류.**  
 A. `ffmpeg`를 설치하고 시스템 PATH에 등록. 터미널에서 `ffmpeg -version`으로 확인.
 
 **Q. 출력 노트가 비어있거나 세그먼트가 거의 없음.**  
-A. `config.yaml`에서 `slide_change_threshold`를 낮추고 (예: `0.80`), `min_slide_sec`도 줄여볼 것 (예: `1.0`). 영상에 음성이 제대로 녹음되어 있는지도 확인.
+A. `config.yaml`에서 `slide_change_threshold`를 낮추고 (예: `0.80`), `min_slide_sec`도 줄여볼 것 (예: `1.0`).
 
 **Q. CUDA out of memory 오류.**  
 A. 더 작은 모델 (`medium` 또는 `small`) 사용, 또는 `device: "cpu"` + `compute_type: "int8"` 으로 전환.
