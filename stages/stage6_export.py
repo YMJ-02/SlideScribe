@@ -2,7 +2,9 @@
 
 matched 데이터(Stage 5 출력)를 HTML / PDF / Markdown으로 출력.
 HTML: 이미지 base64 임베드 → 단일 파일로 배포 가능.
+      레이아웃: 좌측 슬라이드 | 우측 스크립트 (2열)
 PDF:  fpdf2 기반, 한국어 폰트 자동 탐색.
+      레이아웃: 좌측 슬라이드 | 우측 스크립트 (A4 가로)
 Markdown: 이미지 파일 경로 참조.
 
 입력: matched: list[dict]  (Stage 5 출력 — idx, t_start, t_end, frame_path, text)
@@ -15,7 +17,7 @@ import yaml
 from pathlib import Path
 
 
-# ── 유틸 ─────────────────────────────────────────────────────────────
+# ── 유틸 ─────────────────────────────────────────────────────
 
 def _load_config(config_path: str = "config.yaml") -> dict:
     with open(config_path, "r", encoding="utf-8") as f:
@@ -23,7 +25,7 @@ def _load_config(config_path: str = "config.yaml") -> dict:
 
 
 def _fmt_time(seconds: float) -> str:
-    """초 → HH:MM:SS (또는 MM:SS)."""
+    """수 → HH:MM:SS (또는 MM:SS)."""
     s = int(seconds)
     h, rem = divmod(s, 3600)
     m, sec = divmod(rem, 60)
@@ -37,30 +39,82 @@ def _img_to_b64(path: str) -> str:
         return base64.b64encode(f.read()).decode()
 
 
-# ── HTML 내보내기 ─────────────────────────────────────────────────────
+# ── HTML 내보내기 ─────────────────────────────────────────────────
 
 _HTML_STYLE = """
+  * { box-sizing: border-box; }
   body {
     font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
-    max-width: 960px; margin: 0 auto; padding: 24px; background: #fafafa; color: #222;
+    max-width: 1200px; margin: 0 auto; padding: 24px;
+    background: #f5f5f5; color: #222;
   }
   h1 { text-align: center; color: #1a1a2e; margin-bottom: 40px; }
+
+  /* 슬라이드 하나 = 카드 */
   .slide-section {
-    background: #fff; border: 1px solid #e0e0e0; border-radius: 8px;
-    padding: 24px; margin-bottom: 36px; box-shadow: 0 2px 6px rgba(0,0,0,.06);
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin-bottom: 32px;
+    box-shadow: 0 2px 6px rgba(0,0,0,.06);
   }
+
+  /* 헤더 줄 (Slide N + 타임코드) */
   .slide-header {
-    display: flex; justify-content: space-between; align-items: center;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #ececec;
   }
-  .slide-num  { font-size: 1.1em; font-weight: bold; color: #1a1a2e; }
-  .slide-time { font-size: 0.9em; color: #888; }
-  .slide-img  { width: 100%; border: 1px solid #ddd; border-radius: 4px; display: block; }
+  .slide-num  { font-size: 1.05em; font-weight: bold; color: #1a1a2e; }
+  .slide-time { font-size: 0.88em; color: #888; }
+
+  /* 주 콘텐츠: 좌(슬라이드) + 우(스크립트) */
+  .slide-body {
+    display: grid;
+    grid-template-columns: 3fr 1.3fr;
+    gap: 20px;
+    align-items: start;
+  }
+
+  /* 좌측 슬라이드 영역 */
+  .slide-panel img {
+    width: 100%;
+    height: auto;
+    display: block;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+  }
+
+  /* 우측 스크립트 영역 */
+  .transcript-panel {
+    border-left: 2px solid #e8e8e8;
+    padding-left: 16px;
+    min-height: 60px;
+  }
+  .transcript-label {
+    font-size: 0.78em;
+    font-weight: bold;
+    color: #999;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 8px;
+  }
   .transcript {
-    margin-top: 16px; line-height: 1.9; font-size: 0.97em;
-    white-space: pre-wrap; color: #333;
+    line-height: 1.85;
+    font-size: 0.93em;
+    white-space: pre-wrap;
+    color: #333;
   }
-  .no-text { color: #aaa; font-style: italic; }
+  .no-text { color: #bbb; font-style: italic; font-size: 0.88em; }
+
+  /* 맸 끄 인쇄 시: 하나당 새 페이지 */
+  @media print {
+    .slide-section { page-break-after: always; box-shadow: none; }
+  }
 """
 
 
@@ -71,7 +125,7 @@ def _export_html(matched: list[dict], out_path: str) -> None:
         t_e = _fmt_time(slide["t_end"])
         b64 = _img_to_b64(slide["frame_path"])
         text = slide.get("text", "").strip()
-        text_html = (
+        transcript_html = (
             f'<div class="transcript">{text}</div>'
             if text else
             '<div class="transcript no-text">(해당 구간 음성 없음)</div>'
@@ -82,8 +136,15 @@ def _export_html(matched: list[dict], out_path: str) -> None:
       <span class="slide-num">슬라이드 {slide['idx'] + 1}</span>
       <span class="slide-time">{t_s} ~ {t_e}</span>
     </div>
-    <img src="data:image/jpeg;base64,{b64}" class="slide-img" alt="슬라이드 {slide['idx']+1}">
-    {text_html}
+    <div class="slide-body">
+      <div class="slide-panel">
+        <img src="data:image/jpeg;base64,{b64}" alt="슬라이드 {slide['idx']+1}">
+      </div>
+      <div class="transcript-panel">
+        <div class="transcript-label">Transcript</div>
+        {transcript_html}
+      </div>
+    </div>
   </div>""")
 
     html = f"""<!DOCTYPE html>
@@ -104,7 +165,7 @@ def _export_html(matched: list[dict], out_path: str) -> None:
         f.write(html)
 
 
-# ── Markdown 내보내기 ─────────────────────────────────────────────────
+# ── Markdown 내보내기 ───────────────────────────────────────────────
 
 def _export_markdown(matched: list[dict], out_path: str) -> None:
     lines = ["# 강의 노트\n"]
@@ -112,20 +173,19 @@ def _export_markdown(matched: list[dict], out_path: str) -> None:
         t_s = _fmt_time(slide["t_start"])
         t_e = _fmt_time(slide["t_end"])
         text = slide.get("text", "").strip() or "*(해당 구간 음성 없음)*"
-        # 이미지는 상대 경로로 참조 (base64 미사용)
         img_rel = os.path.relpath(slide["frame_path"], os.path.dirname(out_path))
         lines.append(f"---\n\n## 슬라이드 {slide['idx']+1}  `{t_s} ~ {t_e}`\n")
         lines.append(f"![슬라이드 {slide['idx']+1}]({img_rel})\n\n")
-        lines.append(f"{text}\n\n")
+        lines.append(f"> **Transcript**\n>\n> {text.replace(chr(10), chr(10) + '> ')}\n\n")
 
     with open(out_path, "w", encoding="utf-8") as f:
         f.write("\n".join(lines))
 
 
-# ── PDF 내보내기 ──────────────────────────────────────────────────────
+# ── PDF 내보내기 ────────────────────────────────────────────────
 
 _KOREAN_FONT_CANDIDATES = [
-    "C:/Windows/Fonts/malgun.ttf",                              # Windows Malgun Gothic
+    "C:/Windows/Fonts/malgun.ttf",
     "C:/Windows/Fonts/NanumGothic.ttf",
     "/usr/share/fonts/truetype/noto/NotoSansCJKkr-Regular.otf",
     "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
@@ -141,47 +201,66 @@ def _find_korean_font() -> str | None:
 
 
 def _export_pdf(matched: list[dict], out_path: str) -> None:
+    """A4 가로(landscape) 기준: 좌측 슬라이드 / 우측 스크립트."""
     from fpdf import FPDF
 
-    pdf = FPDF(orientation="P", unit="mm", format="A4")  # 210×297 세로
-    pdf.set_auto_page_break(auto=True, margin=15)
+    # 가로 A4: 297 × 210 mm
+    pdf = FPDF(orientation="L", unit="mm", format="A4")
+    pdf.set_auto_page_break(auto=True, margin=10)
 
-    # 한국어 폰트 등록 시도
     font_path = _find_korean_font()
     if font_path:
         pdf.add_font("Korean", "", font_path)
         body_font = "Korean"
     else:
-        print("[Stage 6] 한국어 폰트를 찾지 못했습니다. 텍스트가 깨질 수 있습니다.")
+        print("[Stage 6] 한국어 폴트를 찾지 못했습니다. 텍스트가 깨질 수 있습니다.")
         body_font = "Helvetica"
+
+    # 레이아웃 상수 (mm)
+    PAGE_W, PAGE_H = 297, 210
+    MARGIN = 10
+    SLIDE_W = 190          # 좌측 슬라이드 열 폭
+    SCRIPT_X = MARGIN + SLIDE_W + 6   # 우측 스크립트 시작 X
+    SCRIPT_W = PAGE_W - SCRIPT_X - MARGIN  # 우측 열 폭
 
     for slide in matched:
         pdf.add_page()
 
-        # 슬라이드 이미지 (여백 10mm, 폭 190mm)
-        if os.path.isfile(slide["frame_path"]):
-            pdf.image(slide["frame_path"], x=10, y=10, w=190)
-
-        img_h = 190 * 9 / 16  # 16:9 비율 추정
-        y_text = 10 + img_h + 6
-
-        # 헤더
-        pdf.set_xy(10, y_text)
-        pdf.set_font("Helvetica", "B", 10)
         t_s = _fmt_time(slide["t_start"])
         t_e = _fmt_time(slide["t_end"])
-        pdf.cell(0, 6, f"Slide {slide['idx']+1}  [{t_s} ~ {t_e}]", ln=True)
+        label = f"Slide {slide['idx']+1}  [{t_s} ~ {t_e}]"
 
-        # 본문 텍스트
-        pdf.set_x(10)
-        pdf.set_font(body_font, size=9)
+        # ─ 헤더 ─
+        pdf.set_font("Helvetica", "B", 9)
+        pdf.set_xy(MARGIN, MARGIN)
+        pdf.cell(SLIDE_W, 6, label, ln=False)
+
+        pdf.set_font("Helvetica", "", 8)
+        pdf.set_xy(SCRIPT_X, MARGIN)
+        pdf.cell(SCRIPT_W, 6, "Transcript", ln=False)
+
+        y_content = MARGIN + 8  # 헤더 아래에서 콘텐츠 시작
+
+        # ─ 좌측: 슬라이드 이미지 ─
+        SLIDE_H = SLIDE_W * 9 / 16   # 16:9 비율
+        if os.path.isfile(slide["frame_path"]):
+            pdf.image(slide["frame_path"], x=MARGIN, y=y_content, w=SLIDE_W)
+
+        # ─ 구분선 ─
+        line_x = SCRIPT_X - 3
+        pdf.set_draw_color(200, 200, 200)
+        pdf.line(line_x, MARGIN, line_x, PAGE_H - MARGIN)
+
+        # ─ 우측: 스크립트 텍스트 ─
+        pdf.set_xy(SCRIPT_X, y_content)
+        pdf.set_font(body_font, size=8)
         text = slide.get("text", "").strip() or "(해당 구간 음성 없음)"
-        pdf.multi_cell(190, 5, text)
+        pdf.multi_cell(SCRIPT_W, 5, text)
 
     pdf.output(out_path)
 
 
-# ── 항상 생성되는 독립 출력물 ────────────────────────────────────────
+# ── 항상 생성되는 독립 출력물 ──────────────────────────────────
 
 def _export_transcript(matched: list[dict], out_dir: str) -> str:
     """타임스탬프 포함 전체 텍스트를 transcript.txt로 저장."""
@@ -215,7 +294,7 @@ def _export_slide_images(matched: list[dict], out_dir: str) -> str:
     return slides_dir
 
 
-# ── 메인 진입점 ───────────────────────────────────────────────────────
+# ── 메인 진입점 ───────────────────────────────────────────────────
 
 def run(matched: list[dict], cfg: dict | None = None) -> str:
     """강의 노트 파일 생성.
@@ -235,13 +314,9 @@ def run(matched: list[dict], cfg: dict | None = None) -> str:
     out_dir: str = cfg["paths"]["output_dir"]
     Path(out_dir).mkdir(parents=True, exist_ok=True)
 
-    # ── 항상 생성: transcript.txt ────────────────────────────────────
     transcript_path = _export_transcript(matched, out_dir)
-
-    # ── 항상 생성: output/slides/ 폴더 ──────────────────────────────
     slides_dir = _export_slide_images(matched, out_dir)
 
-    # ── 선택 생성: 강의 노트 (html/pdf/markdown) ─────────────────────
     ext_map = {"html": "html", "pdf": "pdf", "markdown": "md"}
     ext = ext_map.get(fmt, "html")
     out_path = os.path.join(out_dir, f"lecture_note.{ext}")
@@ -262,7 +337,7 @@ def run(matched: list[dict], cfg: dict | None = None) -> str:
     return out_path
 
 
-# ── 단독 실행 테스트 ──────────────────────────────────────────────────
+# ── 단독 실행 테스트 ────────────────────────────────────────────────
 if __name__ == "__main__":
     import sys
     import json
