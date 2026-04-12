@@ -17,7 +17,7 @@ def _run_for_gradio(
     scene_threshold: float,
     ssim_threshold: float,
     progress=gr.Progress(track_tqdm=True),
-) -> tuple[str, str, str]:
+) -> tuple[str, str, str, str]:
     """Gradio button click handler.
 
     Returns:
@@ -26,7 +26,6 @@ def _run_for_gradio(
     if video_file is None:
         return "영상 파일을 업로드해 주세요.", None, None, None
 
-    # gr.File returns a path string or object depending on Gradio version
     video_path = video_file if isinstance(video_file, str) else video_file.name
 
     cfg = load_config()
@@ -35,16 +34,35 @@ def _run_for_gradio(
     cfg["slide_detection"]["ssim_merge_threshold"] = ssim_threshold
 
     try:
-        results = run_pipeline(video_path, cfg)
-        note_path = results["note"]
-        pdf_path = results["slides_pdf"]
-        slides_n = len(results["slides"])
-        segs_n = len(results["segments"])
-        import os
+        from stages import stage1_segment, stage2_pdf, stage3_audio
+        from stages import stage4_stt, stage5_match, stage6_export
+
+        progress(0.00, desc="Starting…")
+
+        progress(0.05, desc="Stage 1/6 — Detecting slide transitions")
+        slides = stage1_segment.run(video_path, cfg)
+
+        progress(0.25, desc="Stage 2/6 — Exporting slide PDF")
+        pdf_path = stage2_pdf.run(slides, cfg)
+
+        progress(0.35, desc="Stage 3/6 — Extracting audio")
+        wav_path = stage3_audio.run(video_path, cfg)
+
+        progress(0.45, desc="Stage 4/6 — Transcribing with Whisper (this may take a while…)")
+        segments = stage4_stt.run(wav_path, cfg)
+
+        progress(0.82, desc="Stage 5/6 — Matching timestamps")
+        matched = stage5_match.run(slides, segments)
+
+        progress(0.92, desc="Stage 6/6 — Generating note")
+        note_path = stage6_export.run(matched, cfg)
+
+        progress(1.00, desc="Done!")
+
         out_dir = cfg["paths"]["output_dir"]
         transcript_path = os.path.join(out_dir, "transcript.txt")
         msg = (
-            f"완료!  슬라이드 {slides_n}개 / STT 세그먼트 {segs_n}개\n"
+            f"완료!  슬라이드 {len(slides)}개 / STT 세그먼트 {len(segments)}개\n"
             f"강의 노트: {note_path}\n"
             f"슬라이드 PDF: {pdf_path}\n"
             f"트랜스크립트: {transcript_path}  |  슬라이드 이미지: {out_dir}/slides/"
