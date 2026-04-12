@@ -32,7 +32,11 @@ def run(slides: list[dict], segments: list[dict]) -> list[dict]:
         matched: slides 딕셔너리 복사본에 "text" 필드 추가한 list
     """
     if not slides:
-        return []
+        # 오디오 전용 입력: 슬라이드 없이 전체 텍스트를 단일 항목으로 반환
+        full_text = " ".join(s["text"] for s in segments if s.get("text"))
+        t_end = max((s["end"] for s in segments), default=0.0)
+        print(f"[Stage 5] 슬라이드 없음 → 전체 텍스트를 단일 항목으로 처리 ({len(segments)}개 세그먼트)")
+        return [{"idx": 0, "t_start": 0.0, "t_end": t_end, "frame_path": "", "text": full_text}]
 
     # 각 슬라이드에 빈 텍스트 버퍼 준비
     matched: list[dict] = [dict(s, text="") for s in slides]

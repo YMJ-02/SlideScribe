@@ -168,12 +168,18 @@ def _export_html(matched: list[dict], out_path: str) -> None:
     for slide in matched:
         t_s = _fmt_time(slide["t_start"])
         t_e = _fmt_time(slide["t_end"])
-        b64 = _img_to_b64(slide["frame_path"])
         text = slide.get("text", "").strip()
         transcript_html = (
             f'<div class="transcript">{text}</div>'
             if text else
             '<div class="transcript no-text">(해당 구간 음성 없음)</div>'
+        )
+        # Audio-only input has no slide image
+        fp = slide.get("frame_path", "")
+        img_html = (
+            f'<img src="data:image/jpeg;base64,{_img_to_b64(fp)}" alt="슬라이드 {slide[\'idx\']+1}">'
+            if fp and os.path.isfile(fp) else
+            '<div class="no-slide">(슬라이드 이미지 없음)</div>'
         )
         pages.append(f"""
   <div class="note-page">
@@ -182,9 +188,7 @@ def _export_html(matched: list[dict], out_path: str) -> None:
       <span class="slide-time">{t_s} ~ {t_e}</span>
     </div>
     <div class="page-body">
-      <div class="slide-panel">
-        <img src="data:image/jpeg;base64,{b64}" alt="슬라이드 {slide['idx']+1}">
-      </div>
+      <div class="slide-panel">{img_html}</div>
       <div class="transcript-panel">
         <div class="transcript-label">Transcript</div>
         {transcript_html}

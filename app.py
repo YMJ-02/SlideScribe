@@ -7,7 +7,7 @@ import os
 import yaml
 import gradio as gr
 
-from run import load_config, run_pipeline
+from run import load_config, run_pipeline, AUDIO_EXTS
 from i18n import t, WHISPER_DISPLAY_NAMES, WHISPER_CODE_MAP
 
 
@@ -40,16 +40,25 @@ def _run_for_gradio(
         from stages import stage1_segment, stage2_pdf, stage3_audio
         from stages import stage4_stt, stage5_match, stage6_export
 
+        from pathlib import Path as _Path
+        is_audio = _Path(video_path).suffix.lower() in AUDIO_EXTS
+
         progress(0.00, desc="Starting…")
 
-        progress(0.05, desc="Stage 1/6 — Detecting slide transitions")
-        slides = stage1_segment.run(video_path, cfg)
+        if is_audio:
+            slides = []
+            pdf_path = None
+            wav_path = video_path                      # skip Stage 3
+            progress(0.10, desc="Audio input — skipping slide detection")
+        else:
+            progress(0.05, desc="Stage 1/6 — Detecting slide transitions")
+            slides = stage1_segment.run(video_path, cfg)
 
-        progress(0.25, desc="Stage 2/6 — Exporting slide PDF")
-        pdf_path = stage2_pdf.run(slides, cfg, stem=stem)
+            progress(0.25, desc="Stage 2/6 — Exporting slide PDF")
+            pdf_path = stage2_pdf.run(slides, cfg, stem=stem)
 
-        progress(0.35, desc="Stage 3/6 — Extracting audio")
-        wav_path = stage3_audio.run(video_path, cfg)
+            progress(0.35, desc="Stage 3/6 — Extracting audio")
+            wav_path = stage3_audio.run(video_path, cfg)
 
         progress(0.45, desc="Stage 4/6 — Transcribing with Whisper (this may take a while…)")
         segments = stage4_stt.run(wav_path, cfg)
@@ -99,7 +108,10 @@ def build_ui() -> gr.Blocks:
             with gr.Column(scale=2):
                 video_input = gr.File(
                     label=t("upload_label", "ko"),
-                    file_types=[".mp4", ".avi", ".mkv", ".mov", ".webm"],
+                    file_types=[
+                        ".mp4", ".avi", ".mkv", ".mov", ".webm",   # video
+                        ".mp3", ".wav", ".m4a", ".aac", ".flac",   # audio
+                    ],
                 )
                 fmt_radio = gr.Radio(
                     choices=["html", "pdf", "markdown"],
