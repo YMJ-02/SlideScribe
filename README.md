@@ -5,6 +5,16 @@ Detects slide transitions, transcribes audio via Whisper, and exports a structur
 
 ---
 
+## Example Note Preview
+
+A sample lecture note preview file is available here:
+
+- [lecture_note_demo.html](https://github.com/YMJ-02/lecture-note/blob/master/docs/lecture_note_demo.html)
+
+Open the file in a browser to see the full layout with slide pages and transcript panels.
+
+---
+
 ## Project Structure
 
 ```
@@ -219,7 +229,7 @@ A. Set `model_name: "small"` or `"base"` in `config.yaml` and set `compute_type:
 A. Install `ffmpeg` and ensure it is in your system `PATH`. Verify with `ffmpeg -version` in a terminal.
 
 **Q. Output note is empty or has very few segments.**  
-A. Lower `slide_change_threshold` (e.g., `0.80`) and `min_slide_sec` (e.g., `1.0`) in `config.yaml`. Also verify the video has audible speech.
+A. Lower `slide_change_threshold` (e.g., `0.80`) and `min_slide_sec` (e.g., `1.0`). Also verify the video has audible speech.
 
 **Q. CUDA out of memory.**  
 A. Use a smaller model (`medium` or `small`) or switch to `device: "cpu"` with `compute_type: "int8"`.
@@ -232,6 +242,16 @@ A. Use a smaller model (`medium` or `small`) or switch to `device: "cpu"` with `
 
 강의 영상에서 강의 노트를 자동으로 생성합니다.
 슬라이드 전환 감지 → Whisper 음성 인식 → 구조화된 노트 문서 출력.
+
+---
+
+## 예시 노트 미리보기
+
+예시 강의 노트 HTML 파일:
+
+- [lecture_note_demo.html](https://github.com/YMJ-02/lecture-note/blob/master/docs/lecture_note_demo.html)
+
+브라우저에서 열면 슬라이드 페이지와 우측 스크립트 패널이 포함된 전체 레이아웃을 확인할 수 있음.
 
 ---
 
