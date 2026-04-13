@@ -4,7 +4,7 @@
 
 **Turn any lecture video into a structured, readable note — automatically.**
 
-[![version](https://img.shields.io/badge/version-0.1.0-blue?style=flat-square)](https://github.com/YMJ-02/SlideScribe/releases)
+[![version](https://img.shields.io/badge/version-0.1.1-blue?style=flat-square)](https://github.com/YMJ-02/SlideScribe/releases)
 [![license](https://img.shields.io/github/license/YMJ-02/SlideScribe?style=flat-square&color=green)](https://github.com/YMJ-02/SlideScribe/blob/master/LICENSE)
 [![python](https://img.shields.io/badge/python-3.10%2B-3776AB?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
 [![CI](https://img.shields.io/github/actions/workflow/status/YMJ-02/SlideScribe/ci.yml?branch=master&style=flat-square&label=CI&logo=github-actions&logoColor=white)](https://github.com/YMJ-02/SlideScribe/actions/workflows/ci.yml)
@@ -28,9 +28,9 @@ Drop in a lecture video. Get back a paginated document with every slide matched 
 ## How It Works
 
 ```
-Video file
+Video / Audio file
   ↓
-  Slide segmentation (SSIM-based)
+  Slide segmentation (SSIM-based)   ← skipped for audio-only input
   ↓
   Audio extraction + Whisper STT
   ↓
@@ -47,16 +47,17 @@ Video file
 SlideScribe/
 ├── app.py              # Gradio web UI entry point
 ├── run.py              # CLI entry point
+├── install.bat         # Windows one-click setup script
 ├── config.yaml         # Configuration file
+├── i18n.py             # UI language strings (EN / KO)
 ├── requirements.txt    # Python dependencies
 ├── stages/             # Pipeline stages (1–6)
-│   ├── stage1_segment.py   # Slide segmentation (SSIM)
-│   ├── stage2_pdf.py       # Slide PDF export
-│   ├── stage3_audio.py     # Audio extraction
-│   ├── stage4_stt.py       # Whisper STT
-│   ├── stage5_match.py     # Timestamp matching
-│   └── stage6_export.py    # Note generation
-├── agent_docs/         # Internal agent documentation
+│   ├── stage1_segment.py
+│   ├── stage2_pdf.py
+│   ├── stage3_audio.py
+│   ├── stage4_stt.py
+│   ├── stage5_match.py
+│   └── stage6_export.py
 └── output/             # Generated outputs (created at runtime)
 ```
 
@@ -89,8 +90,17 @@ brew install ffmpeg
 sudo apt install ffmpeg
 ```
 
-### Clone and install Python dependencies
+### Clone and install
 
+**Windows (recommended)**
+```bat
+git clone https://github.com/YMJ-02/SlideScribe.git
+cd SlideScribe
+install.bat
+```
+`install.bat` installs all Python dependencies, CUDA libraries, and registers DLL paths automatically.
+
+**macOS / Linux**
 ```bash
 git clone https://github.com/YMJ-02/SlideScribe.git
 cd SlideScribe
@@ -116,26 +126,33 @@ python app.py
 
 Open `http://localhost:7860` in a browser.
 
-1. Upload a video file (`.mp4`, `.avi`, `.mkv`, `.mov`, `.webm`)
-2. Choose an output format (`html`, `pdf`, `markdown`)
-3. Adjust slide detection parameters if needed
-4. Click **노트 생성 시작**
-5. Download the generated note, slide PDF, and transcript
+1. Upload one or more video/audio files (`.mp4`, `.avi`, `.mkv`, `.mov`, `.webm`, `.mp3`, `.wav`, `.m4a`, `.aac`, `.flac`)
+2. Choose output format (`html`, `pdf`, `markdown`)
+3. Select Whisper language or leave on Auto-detect
+4. Adjust slide detection parameters if needed
+5. Click **Generate Note**
+6. Download the ZIP containing notes, slide PDFs, and transcripts
 
 ### Option B — CLI
 
 ```bash
-python run.py <video_path>
-```
-
-Examples:
-```bash
+# Single file
 python run.py lecture.mp4
+
+# Multiple files
+python run.py lecture1.mp4 lecture2.mp4 lecture3.mp4
+
+# With options
 python run.py lecture.mp4 --format markdown
 python run.py lecture.mp4 --config my_config.yaml --format pdf
 ```
 
-Output files are written to `output/` by default.
+### Gradio public link (for sharing / demo)
+
+```bash
+python app.py --share
+# → Running on public URL: https://xxxx.gradio.live
+```
 
 ### config.yaml reference
 
@@ -150,7 +167,8 @@ stt:
   model_name: "large-v3"         # Whisper model size (tiny/base/small/medium/large-v3)
   device: "cuda"                 # "cuda" or "cpu"
   compute_type: "float16"        # "float16" (GPU) or "int8" (CPU)
-  language: "ko"                 # Language code
+  language: "auto"               # Language code or "auto" for auto-detect
+  batch_size: 8                  # Chunks processed per GPU batch (lower if VRAM is limited)
 
 export:
   format: "html"                 # Output format: html | pdf | markdown
@@ -204,8 +222,9 @@ When reporting a bug, include:
 ## Version History
 
 | Version | Date | Notes |
-|---------|------|-------|
-| 0.1.0 | 2026 | Initial release. 6-stage pipeline. Gradio UI + CLI. |
+|---------|------|---------|
+| 0.1.1 | 2026-04-13 | Auto CUDA PATH injection, `install.bat`, batch processing, audio input, UI language toggle (EN/KO), Whisper language selector, progress display, `--share` flag |
+| 0.1.0 | 2026-04-12 | Initial release. 6-stage pipeline. Gradio UI + CLI. |
 
 ---
 
@@ -214,11 +233,14 @@ When reporting a bug, include:
 **Q. The program crashes immediately with `No module named 'cv2'`.**  
 A. Run `pip install -r requirements.txt` again. If it still fails, try `pip install opencv-python-headless`.
 
+**Q. `Library cublas64_12.dll is not found` error on Windows.**  
+A. Run `install.bat` — it installs CUDA libraries and registers DLL paths automatically. If you installed manually, run `pip install nvidia-cublas-cu12 nvidia-cudnn-cu12`.
+
 **Q. Whisper model download takes too long or fails.**  
-A. `faster-whisper` downloads the model on first run (~1–3 GB depending on model size). A stable internet connection is required. The model is cached after the first download.
+A. `faster-whisper` downloads the model on first run (~1–3 GB). A stable internet connection is required. The model is cached after the first download. On Windows, enabling Developer Mode fixes symlink-related cache issues.
 
 **Q. Running on CPU is extremely slow.**  
-A. Set `model_name: "small"` or `"base"` in `config.yaml` and set `compute_type: "int8"`. Larger models on CPU are not practical for long videos.
+A. Set `model_name: "small"` or `"base"` in `config.yaml` and set `compute_type: "int8"`.
 
 **Q. `ffmpeg` not found error.**  
 A. Install `ffmpeg` and ensure it is in your system `PATH`. Verify with `ffmpeg -version` in a terminal.
@@ -227,14 +249,13 @@ A. Install `ffmpeg` and ensure it is in your system `PATH`. Verify with `ffmpeg 
 A. Lower `slide_change_threshold` (e.g., `0.80`) and `min_slide_sec` (e.g., `1.0`). Also verify the video has audible speech.
 
 **Q. CUDA out of memory.**  
-A. Use a smaller model (`medium` or `small`) or switch to `device: "cpu"` with `compute_type: "int8"`.
-
----
+A. Lower `batch_size` in `config.yaml` (e.g., `4`), or use a smaller model (`medium` or `small`), or switch to `device: "cpu"`.
 
 ---
 
 # 🎓 SlideScribe (한국어)
 
+대부분의 도구는 원시 트랜스크립트를 낸다. SlideScribe는 구조화된 노트를 낸다 — 각 슬라이드에 실제로 한 말이 매칭된 형태로.
 
 강의 영상을 넣으면 슬라이드마다 트랜스크립트가 연결된 페이지 형태의 노트가 자동으로 만들어집니다.
 
@@ -243,42 +264,15 @@ A. Use a smaller model (`medium` or `small`) or switch to `device: "cpu"` with `
 ## 작동 방식
 
 ```
-영상 파일
+영상 / 오디오 파일
   ↓
-  슬라이드 세그멘테이션 (SSIM 기반)
+  슬라이드 세그멘테이션 (SSIM 기반)   ← 오디오 입력 시 생략
   ↓
   오디오 추출 + Whisper STT
   ↓
   타임스탬프 매칭 (슬라이드 ↔ 트랜스크립트)
   ↓
   내보내기 → HTML / PDF / Markdown
-```
-
----
-
-## 예시 노트 미리보기
-
-![예시 노트 미리보기](docs/preview.png)
-
----
-
-## 프로젝트 구성
-
-```
-SlideScribe/
-├── app.py              # Gradio 웹 UI 진입점
-├── run.py              # CLI 진입점
-├── config.yaml         # 설정 파일
-├── requirements.txt    # Python 의존성 목록
-├── stages/             # 파이프라인 단계 (1–6)
-│   ├── stage1_segment.py   # 슬라이드 세그멘테이션 (SSIM)
-│   ├── stage2_pdf.py       # 슬라이드 PDF 생성
-│   ├── stage3_audio.py     # 오디오 추출
-│   ├── stage4_stt.py       # Whisper STT
-│   ├── stage5_match.py     # 타임스탬프 매칭
-│   └── stage6_export.py    # 노트 생성
-├── agent_docs/         # 내부 문서
-└── output/             # 생성된 결과물 (실행 시 자동 생성)
 ```
 
 ---
@@ -292,39 +286,23 @@ SlideScribe/
 - CPU 전용도 가능하나 STT 처리 속도가 매우 느림
 - `ffmpeg` 설치 후 PATH에 등록 필요
 
-### ffmpeg 설치
+### Windows (원클릭 설치)
 
-**Windows**
-```
-winget install ffmpeg
-```
-
-또는 https://ffmpeg.org/download.html 에서 다운로드 후 PATH에 수동 등록.
-
-**macOS**
-```
-brew install ffmpeg
+```bat
+git clone https://github.com/YMJ-02/SlideScribe.git
+cd SlideScribe
+install.bat
 ```
 
-**Linux (Ubuntu/Debian)**
-```
-sudo apt install ffmpeg
-```
+`install.bat`이 Python 패키지, CUDA 라이브러리, DLL 경로를 자동으로 설치합니다.
 
-### 저장소 클론 및 Python 패키지 설치
+### macOS / Linux
 
 ```bash
 git clone https://github.com/YMJ-02/SlideScribe.git
 cd SlideScribe
 pip install -r requirements.txt
 ```
-
-> GPU가 없는 경우, 실행 전에 `config.yaml`을 수정:
-> ```yaml
-> stt:
->   device: "cpu"
->   compute_type: "int8"
-> ```
 
 ---
 
@@ -338,88 +316,19 @@ python app.py
 
 브라우저에서 `http://localhost:7860` 접속.
 
-1. 영상 파일 업로드 (`.mp4`, `.avi`, `.mkv`, `.mov`, `.webm`)
-2. 출력 포맷 선택 (`html`, `pdf`, `markdown`)
-3. 필요 시 슬라이드 감지 파라미터 조정
-4. **노트 생성 시작** 버튼 클릭
-5. 강의 노트, 슬라이드 PDF, 트랜스크립트 다운로드
+1. 영상/오디오 파일 업로드 (여러 개 동시 가능)
+2. 출력 포맷 선택
+3. Whisper 언어 선택 (기본: 자동 감지)
+4. **Generate Note** 클릭
+5. ZIP 파일로 노트, 슬라이드 PDF, 트랜스크립트 다운로드
 
 ### 방법 B — CLI
 
 ```bash
-python run.py <영상_파일_경로>
-```
-
-예시:
-```bash
 python run.py lecture.mp4
+python run.py lecture1.mp4 lecture2.mp4 lecture3.mp4
 python run.py lecture.mp4 --format markdown
-python run.py lecture.mp4 --config my_config.yaml --format pdf
 ```
-
-결과물은 기본적으로 `output/` 폴더에 저장됨.
-
-### config.yaml 옵션 설명
-
-```yaml
-slide_detection:
-  slide_change_threshold: 0.90   # 낙을수록 슬라이드 전환을 더 많이 감지
-  ssim_merge_threshold: 0.85     # 높을수록 인접 슬라이드를 적극 병합
-  frame_sample_rate: 1           # 초당 샘플링 프레임 수
-  min_slide_sec: 3.0             # 슬라이드 최소 지속 시간 (초)
-
-stt:
-  model_name: "large-v3"         # Whisper 모델 크기 (tiny/base/small/medium/large-v3)
-  device: "cuda"                 # "cuda" 또는 "cpu"
-  compute_type: "float16"        # GPU: "float16" / CPU: "int8"
-  language: "ko"                 # 언어 코드
-
-export:
-  format: "html"                 # 출력 포맷: html | pdf | markdown
-  embed_images: true             # HTML에 슬라이드 이미지 base64 임베드 여부
-
-paths:
-  output_dir: "output"
-  tmp_dir: ".tmp"
-```
-
----
-
-## 저작권 및 사용권 정보
-
-MIT 라이선스. 자세한 내용은 [LICENSE](LICENSE) 파일 참조.
-
----
-
-## 프로그래머 정보
-
-| 항목 | 내용 |
-|------|------|
-| GitHub | [@YMJ-02](https://github.com/YMJ-02) |
-| 저장소 | https://github.com/YMJ-02/SlideScribe |
-
----
-
-## 버그 및 디버그
-
-https://github.com/YMJ-02/SlideScribe/issues 에서 이슈를 등록.
-
-버그 보고 시 아래 정보를 포함:
-- OS 및 Python 버전
-- GPU 모델 (또는 CPU 전용 여부)
-- 사용한 명령어 또는 UI 조작 단계
-- 터미널 전체 에러 트레이스백
-
----
-
-## 참고 및 출처
-
-- [faster-whisper](https://github.com/SYSTRAN/faster-whisper) — CTranslate2 기반 Whisper 추론 엔진
-- [OpenAI Whisper](https://github.com/openai/whisper) — 원본 Whisper 모델
-- [PySceneDetect](https://github.com/Breakthrough/PySceneDetect) — 장면/슬라이드 전환 감지
-- [scikit-image](https://scikit-image.org/) — SSIM 연산
-- [Gradio](https://www.gradio.app/) — 웹 UI 프레임워크
-- [fpdf2](https://py-fpdf2.readthedocs.io/) — PDF 생성
 
 ---
 
@@ -427,26 +336,27 @@ https://github.com/YMJ-02/SlideScribe/issues 에서 이슈를 등록.
 
 | 버전 | 날짜 | 내용 |
 |------|------|------|
-| 0.1.0 | 2026 | 최초 릴리즈. 6단계 파이프라인. Gradio UI + CLI. |
+| 0.1.1 | 2026-04-13 | CUDA 자동 PATH 주입, `install.bat`, 배치 처리, 오디오 입력, UI 언어 토글, Whisper 언어 선택, 진행률 표시, `--share` 플래그 |
+| 0.1.0 | 2026-04-12 | 최초 릴리즈. 6단계 파이프라인. Gradio UI + CLI. |
 
 ---
 
 ## FAQ
 
-**Q. 실행하자마자 `No module named 'cv2'` 오류가 뜸.**  
-A. `pip install -r requirements.txt`를 다시 실행. 그래도 실패하면 `pip install opencv-python-headless` 직접 설치.
+**Q. `Library cublas64_12.dll is not found` 오류.**  
+A. `install.bat` 실행 — CUDA 라이브러리 설치 및 DLL 경로를 자동 등록합니다. 수동 설치 시 `pip install nvidia-cublas-cu12 nvidia-cudnn-cu12`.
 
-**Q. Whisper 모델 다운로드가 너무 오래 걸리거나 실패함.**  
-A. `faster-whisper`는 첫 실행 시 모델을 자동 다운로드함 (모델 크기에 따라 1–3 GB). 안정적인 인터넷 연결이 필요하며, 이후 실행부터는 캐시에서 로드됨.
-
-**Q. CPU로 실행하면 너무 느림.**  
-A. `config.yaml`에서 `model_name: "small"` 또는 `"base"`로 변경하고 `compute_type: "int8"` 설정.
-
-**Q. `ffmpeg` not found 오류.**  
-A. `ffmpeg`를 설치하고 시스템 PATH에 등록. 터미널에서 `ffmpeg -version`으로 확인.
-
-**Q. 출력 노트가 비어있거나 세그먼트가 거의 없음.**  
-A. `config.yaml`에서 `slide_change_threshold`를 낮추고 (예: `0.80`), `min_slide_sec`도 줄여볼 것 (예: `1.0`).
+**Q. Whisper 모델 다운로드가 너무 오래 걸리거나 0%에서 멈춰 있음.**  
+A. Windows에서 `개인 정보 및 보안 → 개발자용 → 개발자 모드 ON` 후 재부팅하면 심볼릭 링크 문제가 해결됩니다.
 
 **Q. CUDA out of memory 오류.**  
-A. 더 작은 모델 (`medium` 또는 `small`) 사용, 또는 `device: "cpu"` + `compute_type: "int8"` 으로 전환.
+A. `config.yaml`에서 `batch_size` 낙추기 (예: `4`), 또는 더 작은 모델 (`medium`/`small`) 사용.
+
+**Q. 실행하자마자 `No module named 'cv2'` 오류.**  
+A. `pip install -r requirements.txt` 다시 실행. 실패 시 `pip install opencv-python-headless`.
+
+**Q. `ffmpeg` not found 오류.**  
+A. `ffmpeg` 설치 후 PATH 등록. `ffmpeg -version`으로 확인.
+
+**Q. 출력 노트가 비어있거나 세그먼트가 거의 없음.**  
+A. `slide_change_threshold` 낙추기 (예: `0.80`), `min_slide_sec` 줄이기 (예: `1.0`).

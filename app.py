@@ -4,11 +4,27 @@ Runs the SlideScribe note generation UI on localhost.
 """
 
 import os
+import sys
+import site
 import zipfile
 import tempfile
 import yaml
 import gradio as gr
 from pathlib import Path
+
+# ── Auto-inject CUDA DLL paths on Windows ────────────────────────────────────
+def _inject_cuda_paths():
+    """Add nvidia CUDA DLL directories to PATH so faster-whisper can find them."""
+    if sys.platform != "win32":
+        return
+    for sp in site.getsitepackages():
+        for lib in ["nvidia/cublas/bin", "nvidia/cudnn/bin", "nvidia/cuda_runtime/bin"]:
+            dll_path = os.path.join(sp, lib.replace("/", os.sep))
+            if os.path.isdir(dll_path) and dll_path not in os.environ.get("PATH", ""):
+                os.environ["PATH"] = dll_path + os.pathsep + os.environ.get("PATH", "")
+
+_inject_cuda_paths()
+# ─────────────────────────────────────────────────────────────────────────────
 
 from run import load_config, run_pipeline, AUDIO_EXTS
 from i18n import t, WHISPER_DISPLAY_NAMES, WHISPER_CODE_MAP
@@ -42,14 +58,13 @@ def _run_for_gradio(
     if not video_files:
         return t("error_no_file", lang), None
 
-    # Normalise to list of path strings
     if not isinstance(video_files, list):
         video_files = [video_files]
     paths = [f if isinstance(f, str) else f.name for f in video_files]
 
     cfg = _build_cfg(fmt, scene_threshold, ssim_threshold, whisper_lang)
     total = len(paths)
-    collected: list[str] = []   # output files to zip
+    collected: list[str] = []
     status_lines: list[str] = []
 
     from stages import stage1_segment, stage2_pdf, stage3_audio
@@ -99,7 +114,6 @@ def _run_for_gradio(
 
     progress(1.0, desc="Done!")
 
-    # Pack all outputs into a single ZIP
     if not collected:
         return "\n".join(status_lines), None
 
@@ -120,22 +134,21 @@ def build_ui() -> gr.Blocks:
     default_whisper = "Auto-detect"
 
     with gr.Blocks(title="SlideScribe") as demo:
-        # ── UI language toggle ───────────────────────────────────────
         with gr.Row():
             gr.Markdown("## SlideScribe")
             ui_lang = gr.Radio(
-                choices=["한국어", "English"],
-                value="한국어",
+                choices=["English", "한국어"],
+                value="English",
                 label="UI Language",
                 scale=0,
             )
 
-        title_md = gr.Markdown(t("subtitle", "ko"))
+        title_md = gr.Markdown(t("subtitle", "en"))
 
         with gr.Row():
             with gr.Column(scale=2):
                 video_input = gr.File(
-                    label=t("upload_label", "ko"),
+                    label=t("upload_label", "en"),
                     file_count="multiple",
                     file_types=[
                         ".mp4", ".avi", ".mkv", ".mov", ".webm",
@@ -145,32 +158,31 @@ def build_ui() -> gr.Blocks:
                 fmt_radio = gr.Radio(
                     choices=["html", "pdf", "markdown"],
                     value=default_fmt,
-                    label=t("format_label", "ko"),
+                    label=t("format_label", "en"),
                 )
                 whisper_dd = gr.Dropdown(
                     choices=WHISPER_DISPLAY_NAMES,
                     value=default_whisper,
-                    label=t("whisper_label", "ko"),
+                    label=t("whisper_label", "en"),
                 )
 
             with gr.Column(scale=1):
-                params_md = gr.Markdown(t("params_header", "ko"))
+                params_md = gr.Markdown(t("params_header", "en"))
                 scene_slider = gr.Slider(
                     minimum=0.70, maximum=0.99, step=0.01,
                     value=default_threshold,
-                    label=t("threshold_label", "ko"),
+                    label=t("threshold_label", "en"),
                 )
                 ssim_slider = gr.Slider(
                     minimum=0.5, maximum=1.0, step=0.01,
                     value=default_ssim,
-                    label=t("merge_label", "ko"),
+                    label=t("merge_label", "en"),
                 )
 
-        run_btn = gr.Button(t("run_btn", "ko"), variant="primary")
-        status_box = gr.Textbox(label=t("status_label", "ko"), lines=6, interactive=False)
-        zip_out = gr.File(label="결과 다운로드 (ZIP)")
+        run_btn = gr.Button(t("run_btn", "en"), variant="primary")
+        status_box = gr.Textbox(label=t("status_label", "en"), lines=6, interactive=False)
+        zip_out = gr.File(label="Download results (ZIP)")
 
-        # ── UI language switch ───────────────────────────────────────
         def _switch_lang(lang_choice):
             lang = "en" if lang_choice == "English" else "ko"
             dl_label = "Download results (ZIP)" if lang == "en" else "결과 다운로드 (ZIP)"
