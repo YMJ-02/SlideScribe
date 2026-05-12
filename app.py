@@ -279,7 +279,12 @@ def main() -> None:
         print("FastAPI / uvicorn not installed. Run: pip install -r requirements.txt")
         sys.exit(1)
 
-    print(f"\n  SlideScribe  →  http://{args.host}:{args.port}\n")
+    display_host = "localhost" if args.host in ("0.0.0.0", "::") else args.host
+    print(f"\n  SlideScribe  →  http://{display_host}:{args.port}")
+    if args.host == "0.0.0.0":
+        print(f"  (listening on all interfaces; open the URL above in your browser)\n")
+    else:
+        print()
     uvicorn.run(
         "app:app" if args.reload else app,
         host=args.host, port=args.port,
