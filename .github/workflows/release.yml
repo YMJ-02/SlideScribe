@@ -1,0 +1,143 @@
+name: Build & Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      version_override:
+        description: 'Version (e.g. 0.3.0). Leave empty to derive from tag.'
+        required: false
+        default: ''
+
+permissions:
+  contents: write   # softprops/action-gh-release needs this to publish
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ── Resolve version from tag or workflow input ────────────
+      - name: Resolve version
+        id: ver
+        shell: pwsh
+        run: |
+          $tag = "${{ github.ref_name }}"
+          $manual = "${{ inputs.version_override }}"
+          if ($manual) {
+            $version = $manual
+          } elseif ($tag -match '^v(.+)$') {
+            $version = $Matches[1]
+          } else {
+            $version = "0.0.0-dev"
+          }
+          "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          Write-Host "Building version: $version"
+
+      # ── Python ────────────────────────────────────────────────
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - name: Install runtime + build dependencies (CPU-only profile)
+        shell: pwsh
+        run: |
+          python -m pip install --upgrade pip
+          # TensorFlow / PyKoSpacing are intentionally skipped — the spec
+          # also excludes them so the installer stays under ~600 MB.
+          pip install `
+            "opencv-python-headless>=4.9" `
+            "scenedetect[opencv]>=0.6.4" `
+            "scikit-image>=0.22" `
+            "Pillow>=10.0" `
+            "fpdf2>=2.7.9" `
+            "faster-whisper>=1.0" `
+            "fastapi>=0.110" `
+            "uvicorn[standard]>=0.27" `
+            "python-multipart>=0.0.9" `
+            "jinja2>=3.1" `
+            "pyyaml>=6.0.1" `
+            "tqdm>=4.66" `
+            "numpy>=1.26" `
+            "pyinstaller>=6.10"
+
+      # ── Bundle ffmpeg.exe ─────────────────────────────────────
+      - name: Download ffmpeg
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path build\bin -Force | Out-Null
+          $url = "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip"
+          Invoke-WebRequest -Uri $url -OutFile ffmpeg.zip
+          Expand-Archive -Path ffmpeg.zip -DestinationPath ffmpeg-tmp -Force
+          $exe = Get-ChildItem -Recurse -Filter ffmpeg.exe ffmpeg-tmp | Select-Object -First 1
+          if (-not $exe) { throw "ffmpeg.exe not found in archive" }
+          Copy-Item $exe.FullName build\bin\ffmpeg.exe -Force
+          Remove-Item -Recurse -Force ffmpeg-tmp, ffmpeg.zip
+          Write-Host "ffmpeg bundled:"
+          Get-Item build\bin\ffmpeg.exe | Format-List Name, Length
+
+      # ── PyInstaller bundle ────────────────────────────────────
+      - name: Build with PyInstaller
+        shell: pwsh
+        run: |
+          pyinstaller build\slidescribe.spec --clean --noconfirm
+          if (-not (Test-Path dist\SlideScribe\SlideScribe.exe)) {
+            throw "PyInstaller did not produce dist\SlideScribe\SlideScribe.exe"
+          }
+          $size = (Get-ChildItem -Recurse dist\SlideScribe | Measure-Object -Property Length -Sum).Sum
+          Write-Host "Bundle size: $([math]::Round($size/1MB, 1)) MB"
+
+      # ── Inno Setup installer ──────────────────────────────────
+      - name: Install Inno Setup
+        run: choco install innosetup -y --no-progress
+
+      - name: Build installer
+        shell: cmd
+        run: |
+          iscc /DMyAppVersion=${{ steps.ver.outputs.version }} build\installer.iss
+          dir dist\installer
+
+      # ── Always upload as workflow artifact (for testing) ─────
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: SlideScribe-Setup-${{ steps.ver.outputs.version }}
+          path: dist\installer\*.exe
+          retention-days: 30
+
+      # ── Publish GitHub Release (only on tag push) ────────────
+      - name: Create / update GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/installer/*.exe
+          name: ${{ github.ref_name }}
+          tag_name: ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          body: |
+            ## ${{ github.ref_name }}
+
+            ### 설치 방법
+
+            1. 아래 **Assets** 에서 `SlideScribe-Setup-${{ steps.ver.outputs.version }}.exe` 다운로드
+            2. 더블클릭 → **다음 → 다음 → 설치 완료**
+            3. 시작 메뉴 / 바탕화면의 **SlideScribe** 아이콘 클릭 → 브라우저가 자동으로 열립니다
+
+            > Python · FFmpeg 설치 **불필요**. 설치본 안에 모두 포함되어 있습니다.
+            > Whisper 모델 가중치(~1.5 GB)는 첫 전사 시 자동 다운로드됩니다 (인터넷 필요).
+            > GPU 가속(NVIDIA RTX)은 호환되는 CUDA 드라이버가 깔린 PC 에서 동작하며, 없으면 CPU 로 자동 fallback 됩니다.
+
+            ### 데이터 위치
+            - 프로그램: `C:\Program Files\SlideScribe\`
+            - 사용자 데이터 (설정/출력/임시): `%LOCALAPPDATA%\SlideScribe\`
+            - 제거해도 사용자 데이터는 보존됩니다.
