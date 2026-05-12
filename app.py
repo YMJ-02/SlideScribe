@@ -44,10 +44,19 @@ from run import load_config, run_pipeline, MODES  # noqa: E402
 
 
 # ── Paths ─────────────────────────────────────────────────────────
+# ROOT/WEB_DIR resolve next to this module — under PyInstaller that's
+# <install>/_internal/, which is read-only. They're only used to *read*
+# the bundled SPA + (default) config.
 ROOT = Path(__file__).resolve().parent
 WEB_DIR = ROOT / "web"
-UPLOAD_DIR = ROOT / ".tmp" / "uploads"
-RESULT_DIR = ROOT / ".tmp" / "results"
+
+# Writable working area. launcher.py chdir's the process to a per-user
+# directory (%LOCALAPPDATA%\SlideScribe) before importing this module,
+# so cwd is the right anchor for uploads/results/tmp. Running from source
+# via `python app.py` keeps the repo root as cwd and behaves the same.
+WORK_DIR = Path.cwd()
+UPLOAD_DIR = WORK_DIR / ".tmp" / "uploads"
+RESULT_DIR = WORK_DIR / ".tmp" / "results"
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 RESULT_DIR.mkdir(parents=True, exist_ok=True)
 

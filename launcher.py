@@ -30,14 +30,19 @@ PORT = 7860
 
 
 def _bundle_dir() -> Path:
-    """Directory containing the running exe / launcher.py."""
+    """Directory containing the bundled data files (config.yaml, web/, ...)."""
     if getattr(sys, "frozen", False):
-        # PyInstaller one-dir: sys.executable is the exe.
-        # PyInstaller one-file: sys._MEIPASS is the temp extract dir.
+        # PyInstaller one-file: data extracted to sys._MEIPASS
         meipass = getattr(sys, "_MEIPASS", None)
         if meipass:
             return Path(meipass)
-        return Path(sys.executable).parent
+        # PyInstaller 6.x one-dir: only the exe sits at <install>/;
+        # bundled data files live under <install>/_internal/
+        exe_dir = Path(sys.executable).resolve().parent
+        internal = exe_dir / "_internal"
+        if internal.is_dir():
+            return internal
+        return exe_dir
     return Path(__file__).resolve().parent
 
 
