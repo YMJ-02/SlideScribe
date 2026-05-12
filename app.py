@@ -119,8 +119,9 @@ async def api_run(
 
     _gc_jobs()
 
-    # Persist uploads with sanitized names
-    saved: list[str] = []
+    # Persist uploads with sanitized names. Track (server_path, original_name)
+    # so output files keep the original stem instead of the upload-time prefix.
+    saved: list[tuple[str, str]] = []
     for f in files:
         if not f.filename:
             continue
@@ -128,7 +129,7 @@ async def api_run(
         dest = UPLOAD_DIR / f"{uuid.uuid4().hex[:8]}_{safe}"
         with open(dest, "wb") as fp:
             shutil.copyfileobj(f.file, fp)
-        saved.append(str(dest))
+        saved.append((str(dest), safe))
 
     if not saved:
         raise HTTPException(status_code=400, detail="no valid files")
@@ -184,7 +185,7 @@ def api_job_download(job_id: str):
 # ── Background pipeline thread ────────────────────────────────────
 def _run_job_thread(
     job_id: str,
-    paths: list[str],
+    items: list[tuple[str, str]],
     mode: str,
     fmt: str,
     sensitivity: float,
@@ -204,15 +205,13 @@ def _run_job_thread(
         cfg["slide_detection"]["min_slide_sec"] = float(min_slide_sec)
         cfg["stt"]["language"] = (whisper_lang or "auto").strip() or "auto"
 
-        total = len(paths)
+        total = len(items)
         collected: list[str] = []
         summary_lines: list[str] = []
 
-        for i, src in enumerate(paths):
-            name = Path(src).name
-            # Strip the uuid_ prefix we added for display
-            display_name = name.split("_", 1)[1] if "_" in name else name
-            base_frac = i / total
+        for i, (src, orig_name) in enumerate(items):
+            display_name = orig_name
+            output_stem = Path(orig_name).stem
 
             def _cb(msg: str, frac: float, _i=i, _name=display_name) -> None:
                 # frac is per-file 0..1; map to global progress
@@ -221,7 +220,7 @@ def _run_job_thread(
 
             _cb("Starting", 0.0)
             try:
-                res = run_pipeline(src, cfg, mode=mode, progress_cb=_cb)
+                res = run_pipeline(src, cfg, mode=mode, progress_cb=_cb, output_stem=output_stem)
                 for p in (res.get("note"), res.get("slides_pdf"), res.get("transcript")):
                     if p and os.path.isfile(p):
                         collected.append(p)

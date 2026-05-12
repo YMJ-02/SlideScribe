@@ -1,0 +1,3 @@
+# Drop ffmpeg.exe here to bundle it with the Windows installer.
+# Get it from: https://www.gyan.dev/ffmpeg/builds/   (ffmpeg-release-essentials.zip → bin/ffmpeg.exe)
+# Without it, end users need to install ffmpeg themselves.

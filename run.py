@@ -48,12 +48,17 @@ def run_pipeline(
     cfg: dict,
     mode: str = "both",
     progress_cb=None,
+    output_stem: str | None = None,
 ) -> dict:
     """3가지 모드를 지원하는 파이프라인.
 
     Args:
         progress_cb: 선택적 콜백 fn(message: str, fraction: float) — UI 진행률 업데이트.
                      fraction 은 0.0~1.0.
+        output_stem: 출력 파일명 기반 (e.g. "lecture_week3").
+                     None 이면 input_path 의 stem 을 사용.
+                     웹 업로드처럼 충돌 방지 prefix 가 붙은 경우, 호출자가
+                     원래 파일명을 명시적으로 전달해야 한다.
 
     Returns:
         dict: slides, slides_pdf, segments, matched, note, transcript, slides_dir
@@ -72,7 +77,7 @@ def run_pipeline(
                 pass
 
     mode = _resolve_mode(input_path, mode)
-    stem = Path(input_path).stem
+    stem = output_stem if output_stem else Path(input_path).stem
     t0 = time.time()
 
     results: dict = {
