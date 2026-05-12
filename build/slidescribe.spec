@@ -61,9 +61,9 @@ hidden_imports += [
 
 # ── Data files (frontend, config, stages package) ───────────────────
 datas = [
-    ("web", "web"),
-    ("config.yaml", "."),
-    ("stages", "stages"),
+    (str(ROOT / "web"),         "web"),
+    (str(ROOT / "config.yaml"), "."),
+    (str(ROOT / "stages"),      "stages"),
 ]
 datas += collect_data_files("faster_whisper")
 datas += collect_data_files("ctranslate2")
@@ -91,7 +91,7 @@ excludes = [
 
 
 a = Analysis(
-    ["launcher.py"],
+    [str(ROOT / "launcher.py")],
     pathex=[str(ROOT)],
     binaries=binaries,
     datas=datas,
