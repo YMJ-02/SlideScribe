@@ -10,7 +10,9 @@
 ; ────────────────────────────────────────────────────────────────────
 
 #define MyAppName       "SlideScribe"
-#define MyAppVersion    "0.3.0"
+#ifndef MyAppVersion
+  #define MyAppVersion  "0.3.0"
+#endif
 #define MyAppPublisher  "YMJ-02"
 #define MyAppURL        "https://github.com/YMJ-02/SlideScribe"
 #define MyAppExeName    "SlideScribe.exe"
@@ -31,7 +33,10 @@ DisableProgramGroupPage=yes
 UninstallDisplayIcon={app}\{#MyAppExeName}
 OutputDir=..\dist\installer
 OutputBaseFilename={#MyAppName}-Setup-{#MyAppVersion}
+
+#if FileExists("icon.ico")
 SetupIconFile=icon.ico
+#endif
 
 Compression=lzma2/ultra
 SolidCompression=yes
@@ -39,8 +44,8 @@ WizardStyle=modern
 
 PrivilegesRequired=lowest
 PrivilegesRequiredOverridesAllowed=dialog
-ArchitecturesAllowed=x64
-ArchitecturesInstallIn64BitMode=x64
+ArchitecturesAllowed=x64compatible
+ArchitecturesInstallIn64BitMode=x64compatible
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"

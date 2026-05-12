@@ -2,6 +2,27 @@
 
 소스 코드를 받아 직접 `python app.py` 로 실행하는 대신, **`SlideScribe-Setup-x.y.z.exe`** 한 개로 일반 윈도우 프로그램처럼 설치할 수 있도록 만드는 방법.
 
+## 자동 빌드 (권장) — GitHub Actions
+
+태그를 푸시하기만 하면 GitHub Actions 가 Windows 러너에서 자동으로 빌드하고 **Releases 페이지에 `.exe` 를 첨부**합니다.
+
+```bash
+# 로컬에서:
+git tag v0.3.0
+git push origin v0.3.0
+```
+
+푸시되면 `.github/workflows/release.yml` 이 트리거되어:
+1. Windows 러너에서 Python · 의존성 · ffmpeg · Inno Setup 자동 설치
+2. PyInstaller + Inno Setup 으로 `SlideScribe-Setup-0.3.0.exe` 빌드
+3. `https://github.com/YMJ-02/SlideScribe/releases` 에 자동 게시 (한국어 설치 안내문 포함)
+
+태그 없이 테스트하려면: Actions 탭 → **Build & Release** → **Run workflow** (`version_override` 입력). Release 는 안 만들고 Actions 의 artifact 로만 올라옴.
+
+---
+
+## 로컬 빌드 (대안)
+
 최종 산출물:
 - `dist/SlideScribe/SlideScribe.exe` — 폴더 통째로 복사해서 실행 가능한 portable 버전
 - `dist/installer/SlideScribe-Setup-0.3.0.exe` — 설치 마법사 (Start Menu/Desktop 단축아이콘 + 제거 등록)
