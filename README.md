@@ -52,7 +52,8 @@ Audio inputs (`.mp3`, `.wav`, `.m4a`, ...) automatically fall into Transcript-on
 
 ```
 SlideScribe/
-├── app.py              # Gradio web UI entry point
+├── app.py              # FastAPI web UI entry point (visionOS-styled SPA)
+├── web/                # frontend SPA — index.html / style.css / app.js
 ├── run.py              # CLI entry point
 ├── install.bat         # Windows one-click setup script
 ├── config.yaml         # Configuration file
@@ -125,40 +126,38 @@ pip install -r requirements.txt
 
 ## Usage
 
-### Option A — Gradio Web UI
+### Option A — Web UI (visionOS-styled)
 
 ```bash
-python app.py
+python app.py            # default localhost:7860
+python app.py --port 8000
+python app.py --host 127.0.0.1 --port 7860
 ```
 
-Open `http://localhost:7860` in a browser.
+Open `http://localhost:7860` in a browser. The UI is a custom FastAPI + SPA.
 
-1. Upload one or more video/audio files (`.mp4`, `.avi`, `.mkv`, `.mov`, `.webm`, `.mp3`, `.wav`, `.m4a`, `.aac`, `.flac`)
-2. Choose output format (`html`, `pdf`, `markdown`)
-3. Select Whisper language or leave on Auto-detect
-4. Adjust slide detection parameters if needed
-5. Click **Generate Note**
-6. Download the ZIP containing notes, slide PDFs, and transcripts
+1. Drop one or more video/audio files (`.mp4`, `.avi`, `.mkv`, `.mov`, `.webm`, `.mp3`, `.wav`, `.m4a`, `.aac`, `.flac`)
+2. Pick a **mode** — Slides + Transcript / Slides only / Transcript only
+3. Adjust detection sensitivity, Whisper language, export format
+4. Click **Generate** — watch the progress bar
+5. Download the ZIP with notes, slide PDFs, and transcripts
 
 ### Option B — CLI
 
 ```bash
-# Single file
+# Single file (default mode: both)
 python run.py lecture.mp4
 
-# Multiple files
-python run.py lecture1.mp4 lecture2.mp4 lecture3.mp4
+# Mode selection
+python run.py lecture.mp4 --mode slides     # slides only — fastest
+python run.py lecture.mp4 --mode whisper    # transcript only
 
-# With options
+# Multiple files
+python run.py lecture1.mp4 lecture2.mp4 lecture3.mp4 --mode both
+
+# Custom config / format
 python run.py lecture.mp4 --format markdown
 python run.py lecture.mp4 --config my_config.yaml --format pdf
-```
-
-### Gradio public link (for sharing / demo)
-
-```bash
-python app.py --share
-# → Running on public URL: https://xxxx.gradio.live
 ```
 
 ### config.yaml reference
@@ -224,7 +223,7 @@ When reporting a bug, include:
 - [OpenAI Whisper](https://github.com/openai/whisper) — Original Whisper model
 - [PySceneDetect](https://github.com/Breakthrough/PySceneDetect) — Scene/slide transition detection
 - [scikit-image](https://scikit-image.org/) — SSIM computation
-- [Gradio](https://www.gradio.app/) — Web UI framework
+- [FastAPI](https://fastapi.tiangolo.com/) + [uvicorn](https://www.uvicorn.org/) — Web server stack
 - [fpdf2](https://py-fpdf2.readthedocs.io/) — PDF generation
 
 ---
@@ -325,25 +324,28 @@ pip install -r requirements.txt
 
 ## 사용법
 
-### 방법 A — Gradio 웹 UI
+### 방법 A — 웹 UI (visionOS 스타일)
 
 ```bash
-python app.py
+python app.py            # localhost:7860
+python app.py --port 8000
 ```
 
-브라우저에서 `http://localhost:7860` 접속.
+브라우저에서 `http://localhost:7860` 접속. FastAPI + 커스텀 SPA 입니다.
 
-1. 영상/오디오 파일 업로드 (여러 개 동시 가능)
-2. 출력 포맷 선택
-3. Whisper 언어 선택 (기본: 자동 감지)
-4. **Generate Note** 클릭
-5. ZIP 파일로 노트, 슬라이드 PDF, 트랜스크립트 다운로드
+1. 영상/오디오 파일 드롭 (여러 개 가능)
+2. **모드** 선택 — 슬라이드 + 스크립트 / 슬라이드만 / 스크립트만
+3. 감지 민감도, Whisper 언어, 출력 포맷 조정
+4. **Generate** 클릭 — 진행률 확인
+5. ZIP 으로 노트 / 슬라이드 PDF / 트랜스크립트 다운로드
 
 ### 방법 B — CLI
 
 ```bash
-python run.py lecture.mp4
-python run.py lecture1.mp4 lecture2.mp4 lecture3.mp4
+python run.py lecture.mp4                          # 기본 mode=both
+python run.py lecture.mp4 --mode slides            # 슬라이드만 (빠름)
+python run.py lecture.mp4 --mode whisper           # 전사만
+python run.py lecture1.mp4 lecture2.mp4 --mode both
 python run.py lecture.mp4 --format markdown
 ```
 
