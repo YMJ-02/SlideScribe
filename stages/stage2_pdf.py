@@ -35,10 +35,15 @@ def run(slides: list[dict], cfg: dict | None = None, stem: str = "lecture_note")
     out_dir: str = cfg["paths"]["output_dir"]
     Path(out_dir).mkdir(parents=True, exist_ok=True)
 
+    if not slides:
+        print("[Stage 2] 슬라이드 없음 → PDF 생성 스킵")
+        return ""
+
     pdf = FPDF(orientation="L", unit="mm", format="A4")  # 297×210 mm 가로
     pdf.set_auto_page_break(auto=False)
 
     print(f"[Stage 2] {len(slides)}개 슬라이드 → PDF 생성 중")
+    written = 0
     for slide in slides:
         frame_path = slide["frame_path"]
         if not os.path.isfile(frame_path):
@@ -46,6 +51,11 @@ def run(slides: list[dict], cfg: dict | None = None, stem: str = "lecture_note")
             continue
         pdf.add_page()
         pdf.image(frame_path, x=0, y=0, w=297, h=210)
+        written += 1
+
+    if written == 0:
+        print("[Stage 2] 유효한 프레임이 없어 PDF 생성 스킵")
+        return ""
 
     out_path = os.path.join(out_dir, f"{stem}-slides.pdf")
     pdf.output(out_path)

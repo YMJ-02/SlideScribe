@@ -30,14 +30,21 @@ Drop in a lecture video. Get back a paginated document with every slide matched 
 ```
 Video / Audio file
   ↓
-  Slide segmentation (SSIM-based)   ← skipped for audio-only input
+  Pick a mode  ───  Slides + Transcript  (default)
+                    Slides only          (skip Whisper — fastest)
+                    Transcript only      (skip slide detection)
   ↓
-  Audio extraction + Whisper STT
+  Slide segmentation (multi-signal: SSIM + dHash + color hist + edges,
+                       adaptive threshold)  — runs only in slide modes
+  ↓
+  Audio extraction + Whisper STT          — runs only in transcript modes
   ↓
   Timestamp matching (slide ↔ transcript)
   ↓
   Export → HTML / PDF / Markdown
 ```
+
+Audio inputs (`.mp3`, `.wav`, `.m4a`, ...) automatically fall into Transcript-only mode.
 
 ---
 
@@ -157,11 +164,14 @@ python app.py --share
 ### config.yaml reference
 
 ```yaml
+pipeline:
+  default_mode: "both"           # both | slides | whisper
+
 slide_detection:
-  slide_change_threshold: 0.90   # Lower = detects more transitions
-  ssim_merge_threshold: 0.85     # Higher = merges more adjacent slides
-  frame_sample_rate: 1           # Frames sampled per second
-  min_slide_sec: 3.0             # Minimum slide duration in seconds
+  frame_sample_rate: 2.0         # fps — higher catches faster cuts
+  sensitivity: 2.5               # lower = more slides detected (1.5–4.0)
+  merge_score: 0.07              # higher = merges more near-duplicates
+  min_slide_sec: 2.0             # short slides are merged into neighbors
 
 stt:
   model_name: "large-v3"         # Whisper model size (tiny/base/small/medium/large-v3)
@@ -246,7 +256,7 @@ A. Set `model_name: "small"` or `"base"` in `config.yaml` and set `compute_type:
 A. Install `ffmpeg` and ensure it is in your system `PATH`. Verify with `ffmpeg -version` in a terminal.
 
 **Q. Output note is empty or has very few segments.**  
-A. Lower `slide_change_threshold` (e.g., `0.80`) and `min_slide_sec` (e.g., `1.0`). Also verify the video has audible speech.
+A. Lower `sensitivity` in `config.yaml` (e.g., `2.0`) and reduce `min_slide_sec` (e.g., `1.0`). Also try raising `frame_sample_rate` to `3.0` to catch quick cuts.
 
 **Q. CUDA out of memory.**  
 A. Lower `batch_size` in `config.yaml` (e.g., `4`), or use a smaller model (`medium` or `small`), or switch to `device: "cpu"`.
@@ -266,14 +276,21 @@ A. Lower `batch_size` in `config.yaml` (e.g., `4`), or use a smaller model (`med
 ```
 영상 / 오디오 파일
   ↓
-  슬라이드 세그멘테이션 (SSIM 기반)   ← 오디오 입력 시 생략
+  모드 선택  ───  슬라이드 + 스크립트  (기본)
+                  슬라이드만            (Whisper 생략 — 가장 빠름)
+                  스크립트만            (슬라이드 감지 생략)
   ↓
-  오디오 추출 + Whisper STT
+  슬라이드 세그멘테이션 (다중 시그널: SSIM + dHash + 색히스토그램 + 에지,
+                          적응형 임계값) — 슬라이드 모드일 때만 실행
+  ↓
+  오디오 추출 + Whisper STT — 스크립트 모드일 때만 실행
   ↓
   타임스탬프 매칭 (슬라이드 ↔ 트랜스크립트)
   ↓
   내보내기 → HTML / PDF / Markdown
 ```
+
+오디오 파일 (`.mp3`, `.wav`, `.m4a` 등) 은 자동으로 스크립트 전용 모드로 전환됩니다.
 
 ---
 
@@ -359,4 +376,4 @@ A. `pip install -r requirements.txt` 다시 실행. 실패 시 `pip install open
 A. `ffmpeg` 설치 후 PATH 등록. `ffmpeg -version`으로 확인.
 
 **Q. 출력 노트가 비어있거나 세그먼트가 거의 없음.**  
-A. `slide_change_threshold` 낙추기 (예: `0.80`), `min_slide_sec` 줄이기 (예: `1.0`).
+A. `sensitivity` 를 낮추세요 (예: `2.0`) — 더 많이 감지합니다. `min_slide_sec` 도 줄이고 (예: `1.0`), 빠른 컷이 있다면 `frame_sample_rate` 를 `3.0` 으로 올리세요.
