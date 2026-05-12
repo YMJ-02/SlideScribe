@@ -121,5 +121,49 @@ def main() -> None:
         print("\nShutting down…")
 
 
+def _run_with_error_pause() -> None:
+    """Wrap main() so the console window stays open on crash.
+
+    When SlideScribe.exe is launched by double-click, a Python exception
+    closes the console instantly and the user sees nothing. Catch
+    everything, dump the traceback to both screen and a log file under
+    the user data dir, and wait for ENTER before exiting.
+    """
+    import traceback
+    log_path = None
+    try:
+        main()
+    except SystemExit:
+        raise
+    except BaseException:
+        tb = traceback.format_exc()
+        # Best-effort log file for after-the-fact inspection
+        try:
+            log_path = _user_data_dir() / "crash.log"
+            log_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(log_path, "a", encoding="utf-8") as fp:
+                fp.write("=" * 60 + "\n")
+                fp.write(f"  Crash at {time.strftime('%Y-%m-%d %H:%M:%S')}\n")
+                fp.write("=" * 60 + "\n")
+                fp.write(tb)
+                fp.write("\n")
+        except Exception:
+            pass
+
+        print()
+        print("=" * 60)
+        print("  SlideScribe crashed.")
+        print("=" * 60)
+        print(tb)
+        if log_path:
+            print(f"  Full log saved to: {log_path}")
+        print()
+        try:
+            input("  Press ENTER to close this window.")
+        except EOFError:
+            pass
+        sys.exit(1)
+
+
 if __name__ == "__main__":
-    main()
+    _run_with_error_pause()
