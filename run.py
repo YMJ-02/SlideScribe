@@ -43,8 +43,17 @@ def _resolve_mode(input_path: str, mode: str) -> str:
     return mode
 
 
-def run_pipeline(input_path: str, cfg: dict, mode: str = "both") -> dict:
+def run_pipeline(
+    input_path: str,
+    cfg: dict,
+    mode: str = "both",
+    progress_cb=None,
+) -> dict:
     """3가지 모드를 지원하는 파이프라인.
+
+    Args:
+        progress_cb: 선택적 콜백 fn(message: str, fraction: float) — UI 진행률 업데이트.
+                     fraction 은 0.0~1.0.
 
     Returns:
         dict: slides, slides_pdf, segments, matched, note, transcript, slides_dir
@@ -54,6 +63,13 @@ def run_pipeline(input_path: str, cfg: dict, mode: str = "both") -> dict:
 
     if mode not in MODES:
         raise ValueError(f"mode 는 {MODES} 중 하나여야 합니다: {mode}")
+
+    def _emit(msg: str, frac: float) -> None:
+        if progress_cb is not None:
+            try:
+                progress_cb(msg, frac)
+            except Exception:
+                pass
 
     mode = _resolve_mode(input_path, mode)
     stem = Path(input_path).stem
@@ -79,10 +95,12 @@ def run_pipeline(input_path: str, cfg: dict, mode: str = "both") -> dict:
     # ── Stage 1 + 2: 슬라이드 감지 + PDF ───────────────────────────────
     if do_slides:
         print(f"\n{bar}\n Stage 1  슬라이드 세그멘테이션\n{bar}")
+        _emit("Stage 1 · Detecting slides", 0.05)
         slides = stage1_segment.run(input_path, cfg)
         results["slides"] = slides
 
         print(f"\n{bar}\n Stage 2  슬라이드 PDF\n{bar}")
+        _emit("Stage 2 · Building slide PDF", 0.30)
         results["slides_pdf"] = stage2_pdf.run(slides, cfg, stem=stem) or None
     else:
         slides = []
@@ -96,14 +114,17 @@ def run_pipeline(input_path: str, cfg: dict, mode: str = "both") -> dict:
             print(f"\n{bar}\n Stage 3  (오디오 입력 — 추출 생략)\n{bar}")
         else:
             print(f"\n{bar}\n Stage 3  오디오 추출\n{bar}")
+            _emit("Stage 3 · Extracting audio", 0.40)
             wav_path = stage3_audio.run(input_path, cfg)
 
         print(f"\n{bar}\n Stage 4  Whisper STT\n{bar}")
+        _emit("Stage 4 · Whisper transcribing (this may take a while)", 0.45)
         segments = stage4_stt.run(wav_path, cfg)
         results["segments"] = segments
 
     # ── Stage 5: 매칭 (모드별 분기) ────────────────────────────────────
     print(f"\n{bar}\n Stage 5  타임스탬프 매칭 / 정렬\n{bar}")
+    _emit("Stage 5 · Matching timestamps", 0.85)
     if mode == "slides":
         # 슬라이드는 있지만 text 는 비움
         matched = [dict(s, text="") for s in slides]
@@ -116,6 +137,7 @@ def run_pipeline(input_path: str, cfg: dict, mode: str = "both") -> dict:
 
     # ── Stage 6: 노트 출력 ────────────────────────────────────────────
     print(f"\n{bar}\n Stage 6  노트 내보내기\n{bar}")
+    _emit("Stage 6 · Exporting note", 0.95)
     note_path = stage6_export.run(matched, cfg, stem=stem)
     results["note"] = note_path
 

@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>SlideScribe</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body data-lang="en">
+
+<div class="app">
+
+  <!-- ─ Hero ────────────────────────────────────────────── -->
+  <div class="hero glass-pill">
+    <div class="hero-logo">S</div>
+    <div class="hero-title">
+      <h1>SlideScribe</h1>
+      <p data-i18n="tagline">Lecture video → structured notes, in one pass.</p>
+    </div>
+    <div class="hero-spacer"></div>
+    <div class="hero-lang">
+      <button class="active" data-lang="en">EN</button>
+      <button data-lang="ko">KO</button>
+    </div>
+  </div>
+
+  <!-- ─ Main glass panel ────────────────────────────────── -->
+  <div class="glass">
+
+    <!-- Upload -->
+    <div class="section">
+      <div class="section-label" data-i18n="section_upload">Upload</div>
+      <div class="dropzone" id="dropzone" role="button" tabindex="0" aria-label="Choose files">
+        <div class="dropzone-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/>
+            <line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+        </div>
+        <div class="dropzone-title" data-i18n="upload_title">Drop a video or audio file</div>
+        <div class="dropzone-sub"   data-i18n="upload_sub">or click to browse — MP4, MKV, MOV, WAV, M4A…</div>
+      </div>
+      <input type="file" id="file-input" class="hidden-input" multiple
+             accept=".mp4,.avi,.mkv,.mov,.webm,.mp3,.wav,.m4a,.aac,.flac">
+      <div class="file-list" id="file-list"></div>
+    </div>
+
+    <!-- Mode -->
+    <div class="section">
+      <div class="section-label" data-i18n="section_mode">Mode</div>
+      <div class="segmented" id="mode-segmented" role="tablist">
+        <button class="active" data-mode="both"    role="tab" aria-selected="true"  data-i18n="mode_both">Slides + Transcript</button>
+        <button             data-mode="slides"  role="tab" aria-selected="false" data-i18n="mode_slides">Slides only</button>
+        <button             data-mode="whisper" role="tab" aria-selected="false" data-i18n="mode_whisper">Transcript only</button>
+      </div>
+      <div class="mode-hint" id="mode-hint" data-i18n="mode_hint_both">
+        Detect slides AND transcribe audio with Whisper.
+      </div>
+    </div>
+
+    <!-- Slide params -->
+    <div class="section" id="slide-params-section">
+      <div class="section-label" data-i18n="section_slide_params">Slide detection</div>
+
+      <div class="slider-row">
+        <label for="sensitivity" data-i18n="sensitivity_label">Sensitivity (lower = more slides)</label>
+        <input type="range" id="sensitivity" min="1.5" max="4.0" step="0.1" value="2.5">
+        <span class="slider-value" id="sensitivity-val">2.5</span>
+      </div>
+
+      <div class="slider-row">
+        <label for="merge_score" data-i18n="merge_label">Merge similar slides</label>
+        <input type="range" id="merge_score" min="0.02" max="0.20" step="0.005" value="0.07">
+        <span class="slider-value" id="merge_score-val">0.070</span>
+      </div>
+
+      <div class="slider-row">
+        <label for="sample_rate" data-i18n="sample_rate_label">Sample rate (fps)</label>
+        <input type="range" id="sample_rate" min="1.0" max="5.0" step="0.5" value="2.0">
+        <span class="slider-value" id="sample_rate-val">2.0</span>
+      </div>
+
+      <div class="slider-row">
+        <label for="min_dur" data-i18n="min_dur_label">Min slide duration (s)</label>
+        <input type="range" id="min_dur" min="0.5" max="10.0" step="0.5" value="2.0">
+        <span class="slider-value" id="min_dur-val">2.0</span>
+      </div>
+    </div>
+
+    <!-- Whisper params -->
+    <div class="section" id="whisper-params-section">
+      <div class="section-label" data-i18n="section_whisper_params">Transcription</div>
+
+      <div class="row-with-label">
+        <label for="whisper-lang" data-i18n="whisper_lang_label">Language</label>
+        <div class="select-wrap">
+          <select id="whisper-lang">
+            <option value=""   data-i18n="lang_auto">Auto-detect</option>
+            <option value="ko">한국어</option>
+            <option value="en">English</option>
+            <option value="ja">日本語</option>
+            <option value="zh">中文</option>
+            <option value="fr">Français</option>
+            <option value="de">Deutsch</option>
+            <option value="es">Español</option>
+            <option value="pt">Português</option>
+            <option value="ru">Русский</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="row-with-label">
+        <label data-i18n="format_label">Export format</label>
+        <div class="segmented" id="format-segmented">
+          <button class="active" data-fmt="html">HTML</button>
+          <button             data-fmt="pdf">PDF</button>
+          <button             data-fmt="markdown">Markdown</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Run -->
+    <div class="section">
+      <button class="btn-primary" id="run-btn" data-i18n="run_btn">Generate</button>
+    </div>
+
+  </div>
+
+  <!-- ─ Progress (shown while running) ───────────────────── -->
+  <div class="glass progress-panel" id="progress-panel" aria-live="polite">
+    <div class="progress-head">
+      <span class="progress-spinner" aria-hidden="true"></span>
+      <span class="progress-title"  id="progress-title">Starting…</span>
+      <span class="progress-pct"    id="progress-pct">0%</span>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+  </div>
+
+  <!-- ─ Result (shown when done) ─────────────────────────── -->
+  <div class="glass result-panel" id="result-panel" aria-live="polite">
+    <div class="result-title" id="result-title" data-i18n="result_done">DONE</div>
+    <div class="result-summary" id="result-summary"></div>
+    <div class="result-actions">
+      <a href="#" class="btn-secondary" id="download-link" download>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="7 10 12 15 17 10"/>
+          <line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+        <span data-i18n="download_btn">Download ZIP</span>
+      </a>
+    </div>
+  </div>
+
+  <div class="footer">
+    SlideScribe · faster-whisper + adaptive multi-signal slide detection
+  </div>
+
+</div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>
