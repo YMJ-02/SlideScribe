@@ -124,7 +124,12 @@ def run_pipeline(
 
         print(f"\n{bar}\n Stage 4  Whisper STT\n{bar}")
         _emit("Stage 4 · Whisper transcribing (this may take a while)", 0.45)
-        segments = stage4_stt.run(wav_path, cfg)
+
+        # Stage 4 내부 진행률(0..1) 을 글로벌 0.45..0.85 구간으로 매핑
+        def _stt_cb(msg: str, frac: float) -> None:
+            _emit(msg, 0.45 + max(0.0, min(1.0, frac)) * 0.40)
+
+        segments = stage4_stt.run(wav_path, cfg, progress_cb=_stt_cb)
         results["segments"] = segments
 
     # ── Stage 5: 매칭 (모드별 분기) ────────────────────────────────────
