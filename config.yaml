@@ -19,7 +19,9 @@ stt:
   compute_type: "float16"
   language: "auto"   # auto | ko | en | ja | zh | fr | de | es | pt | ru
   beam_size: 5
-  batch_size: 8
+  # 1 = 단일 세그먼트 (안전, 권장). >1 = BatchedInferencePipeline (빠르지만
+  # 8GB VRAM 환경에서 멈춤 사례 있음). 충분한 VRAM + 안정적 환경에서만 4~8 사용.
+  batch_size: 1
   kospacing: true    # 한국어 띄어쓰기 자동 교정 (감지/선택 언어가 ko일 때)
 
 export:

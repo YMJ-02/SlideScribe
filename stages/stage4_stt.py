@@ -64,15 +64,24 @@ def _load_config(config_path: str = "config.yaml") -> dict:
         return yaml.safe_load(f)
 
 
-def run(wav_path: str, cfg: dict | None = None) -> list[dict]:
+def _fmt_time(sec: float) -> str:
+    s = int(sec)
+    m, s = divmod(s, 60)
+    h, m = divmod(m, 60)
+    return f"{h:02d}:{m:02d}:{s:02d}" if h else f"{m:02d}:{s:02d}"
+
+
+def run(wav_path: str, cfg: dict | None = None, progress_cb=None) -> list[dict]:
     """Whisper STT 실행.
 
     batch_size > 1 이면 BatchedInferencePipeline 사용 (속도 향상).
     BatchedInferencePipeline 미지원 환경에서는 자동 fallback.
 
     Args:
-        wav_path: 입력 WAV 파일 경로
-        cfg:      config.yaml dict
+        wav_path:    입력 WAV 파일 경로
+        cfg:         config.yaml dict
+        progress_cb: 선택적 콜백 fn(message: str, fraction: float) — 세그먼트마다 호출.
+                     fraction 은 0.0~1.0 (오디오 진행률).
 
     Returns:
         segments: list[dict] with keys start, end, text
@@ -90,13 +99,15 @@ def run(wav_path: str, cfg: dict | None = None) -> list[dict]:
     beam_size: int = stt_cfg["beam_size"]
     batch_size: int = stt_cfg.get("batch_size", 1)
 
-    from faster_whisper import WhisperModel
-
     model = _load_model(model_name, device, compute_type)
 
     transcribe_kwargs = dict(language=language, beam_size=beam_size)
 
     if batch_size > 1:
+        # 8GB VRAM 환경에서 cudnn/메모리 압박으로 첫 세그먼트 전에 멈추는 사례가 있어
+        # 멈춤 시 config.yaml 에서 batch_size: 1 로 바꾸도록 안내한다.
+        print(f"[Stage 4] 주의: batch_size={batch_size} — BatchedInferencePipeline 사용. "
+              "전사가 멈추면 config.yaml 에서 batch_size: 1 로 변경하세요.")
         try:
             from faster_whisper import BatchedInferencePipeline
             pipeline = BatchedInferencePipeline(model=model)
@@ -111,7 +122,11 @@ def run(wav_path: str, cfg: dict | None = None) -> list[dict]:
         raw_segments, info = model.transcribe(wav_path, **transcribe_kwargs)
 
     print(f"[Stage 4] 감지 언어: {info.language}  (확률 {info.language_probability:.2%})")
-    print("[Stage 4] 전사 중...")
+    duration = float(getattr(info, "duration", 0.0) or 0.0)
+    if duration:
+        print(f"[Stage 4] 전사 시작 (오디오 길이 {_fmt_time(duration)})")
+    else:
+        print("[Stage 4] 전사 시작")
 
     segments: list[dict] = []
     for seg in raw_segments:
@@ -120,6 +135,23 @@ def run(wav_path: str, cfg: dict | None = None) -> list[dict]:
             "end": round(seg.end, 3),
             "text": seg.text.strip(),
         })
+        # 세그먼트별 진행률 — 콘솔에 한 줄, 콜백으로 UI 업데이트
+        if duration > 0:
+            frac = min(1.0, float(seg.end) / duration)
+            pct_str = f"{frac * 100:5.1f}%"
+        else:
+            frac = 0.0
+            pct_str = "  ?.?%"
+        print(f"  [{pct_str}] [{_fmt_time(seg.start)} ~ {_fmt_time(seg.end)}] "
+              f"{seg.text.strip()[:70]}")
+        if progress_cb is not None:
+            msg = (f"Stage 4 · {_fmt_time(seg.end)} / {_fmt_time(duration)} "
+                   f"({len(segments)} segments)") if duration else \
+                  f"Stage 4 · {len(segments)} segments"
+            try:
+                progress_cb(msg, frac)
+            except Exception:
+                pass
 
     print(f"[Stage 4] 완료: {len(segments)}개 세그먼트")
 
