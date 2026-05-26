@@ -17,6 +17,7 @@ The launcher:
 from __future__ import annotations
 
 import os
+import re
 import shutil
 import sys
 import threading
@@ -57,6 +58,53 @@ def _user_data_dir() -> Path:
     return Path(base) / "SlideScribe"
 
 
+_BATCH_SIZE_RE = re.compile(r"^(\s*batch_size\s*:\s*)(\d+)", re.MULTILINE)
+
+
+def _migrate_user_config(user_cfg: Path) -> None:
+    """기존 user config 의 알려진 위험 값을 안전한 default 로 마이그레이션.
+
+    - stt.batch_size > 1 → 1
+      RTX 2070 (8GB VRAM) + large-v3 환경에서 BatchedInferencePipeline 이
+      첫 세그먼트 출력 전에 멈추는 사례 다수 확인됨. 구버전 SlideScribe 의
+      기본값(8)이 그대로 남아있는 사용자가 새 .exe 를 실행해도 행이 재발하므로
+      여기서 일괄 1 로 강제하고 원본은 .bak 으로 백업한다.
+    """
+    if not user_cfg.is_file():
+        return
+    try:
+        text = user_cfg.read_text(encoding="utf-8")
+    except OSError:
+        return
+    m = _BATCH_SIZE_RE.search(text)
+    if not m:
+        return
+    try:
+        current = int(m.group(2))
+    except ValueError:
+        return
+    if current <= 1:
+        return
+
+    bak = user_cfg.with_suffix(".yaml.bak")
+    try:
+        shutil.copy2(user_cfg, bak)
+    except OSError:
+        bak = None  # 백업 실패해도 마이그레이션은 진행
+
+    new_text = _BATCH_SIZE_RE.sub(r"\g<1>1", text, count=1)
+    try:
+        user_cfg.write_text(new_text, encoding="utf-8")
+    except OSError:
+        return
+
+    msg = (f"[Config 마이그레이션] stt.batch_size {current} → 1 "
+           "(BatchedInferencePipeline 행 방지)")
+    if bak is not None:
+        msg += f"  · 백업: {bak.name}"
+    print(msg)
+
+
 def _setup_runtime() -> tuple[Path, Path]:
     bundle = _bundle_dir()
     user_dir = _user_data_dir()
@@ -71,6 +119,9 @@ def _setup_runtime() -> tuple[Path, Path]:
                 shutil.copy2(bundled_cfg, user_cfg)
             except OSError:
                 pass
+    else:
+        # 기존 config 마이그레이션 (구버전 기본값으로 인한 행 방지)
+        _migrate_user_config(user_cfg)
 
     # Make bundled ffmpeg (if shipped at bundle/bin/ffmpeg.exe) discoverable.
     bundled_bin = bundle / "bin"
