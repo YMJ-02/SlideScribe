@@ -22,7 +22,11 @@ stt:
   # 1 = 단일 세그먼트 (안전, 권장). >1 = BatchedInferencePipeline (빠르지만
   # 8GB VRAM 환경에서 멈춤 사례 있음). 충분한 VRAM + 안정적 환경에서만 4~8 사용.
   batch_size: 1
-  kospacing: true    # 한국어 띄어쓰기 자동 교정 (감지/선택 언어가 ko일 때)
+  # PyKoSpacing 은 내부적으로 TensorFlow 를 로드하는데, 같은 프로세스에
+  # 이미 떠 있는 faster-whisper(ctranslate2) + CUDA cuBLAS/cuDNN 과 cleanup
+  # 시점에 silent crash 가 나는 사례가 확인되어 기본 false. Whisper large-v3
+  # 자체의 한국어 띄어쓰기로도 충분하다. 켜고 싶다면 subprocess 격리 필요.
+  kospacing: false
 
 export:
   format: "html"        # html | pdf | markdown
