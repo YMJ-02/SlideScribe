@@ -40,8 +40,33 @@ def _register_cuda_dlls() -> None:
 _register_cuda_dlls()
 
 
+def _is_model_file_error(e: Exception) -> bool:
+    """faster-whisper 가 모델 파일을 읽지 못해 발생한 IO 에러인지 판별.
+
+    이런 에러는 device/compute_type 과 무관하므로 CPU fallback 으로 해결되지 않는다.
+    """
+    msg = str(e).lower()
+    return ("unable to open file" in msg) or ("model.bin" in msg) \
+        or ("no such file" in msg)
+
+
+def _raise_model_file_error(model_name: str, original: Exception) -> None:
+    raise RuntimeError(
+        f"Whisper 모델 파일을 열 수 없습니다: {original}\n"
+        f"원인: 모델 다운로드가 중간에 끊겼거나 캐시 파일이 손상된 것으로 보입니다.\n"
+        f"해결: HuggingFace 캐시 폴더를 삭제하고 다시 실행하세요.\n"
+        f"  파일 탐색기 주소창에 붙여넣기 →\n"
+        f"     %USERPROFILE%\\.cache\\huggingface\\hub\\models--Systran--faster-whisper-{model_name}\n"
+        f"  해당 폴더 삭제 후 SlideScribe 재시작 시 약 3GB 모델이 자동 재다운로드됩니다 (인터넷 필요)."
+    ) from original
+
+
 def _load_model(model_name: str, device: str, compute_type: str):
-    """WhisperModel 로드. CUDA 초기화 실패 시 CPU/int8로 자동 fallback."""
+    """WhisperModel 로드. CUDA 초기화 실패 시 CPU/int8로 자동 fallback.
+
+    단, 모델 파일 IO 에러는 device 와 무관하므로 fallback 하지 않고
+    사용자에게 캐시 폴더 삭제 안내와 함께 즉시 raise 한다.
+    """
     from faster_whisper import WhisperModel
 
     def _try(dev, ct):
@@ -52,11 +77,24 @@ def _load_model(model_name: str, device: str, compute_type: str):
         try:
             return _try(device, compute_type)
         except Exception as e:
+            if _is_model_file_error(e):
+                # CPU 로 가도 같은 파일을 못 여니까 의미 없음 — 즉시 안내
+                _raise_model_file_error(model_name, e)
             # cublas/cuDNN DLL 없거나 CUDA 미지원 환경
             print(f"[Stage 4] CUDA 초기화 실패 ({e.__class__.__name__}: {e})")
             print("[Stage 4] CPU / int8 모드로 fallback합니다 (속도 느림)")
-            return _try("cpu", "int8")
-    return _try(device, compute_type)
+            try:
+                return _try("cpu", "int8")
+            except Exception as e2:
+                if _is_model_file_error(e2):
+                    _raise_model_file_error(model_name, e2)
+                raise
+    try:
+        return _try(device, compute_type)
+    except Exception as e:
+        if _is_model_file_error(e):
+            _raise_model_file_error(model_name, e)
+        raise
 
 
 def _load_config(config_path: str = "config.yaml") -> dict:
