@@ -61,21 +61,40 @@ def _raise_model_file_error(model_name: str, original: Exception) -> None:
     ) from original
 
 
+# ─── WhisperModel 인스턴스 캐시 ───────────────────────────────────
+# faster-whisper(ctranslate2) 의 CUDA 모델을 함수 로컬 변수로만 두면
+# stage4_stt.run() return 직후 GC 되며 cuBLAS/cuDNN cleanup 이 호출되는데,
+# 같은 프로세스에 떠 있는 다른 CUDA DLL 과 충돌해 윈도우+RTX 환경에서
+# Python 프로세스가 silent crash 한다 (Stage 5 print 도 못 찍고 종료).
+# 모듈 레벨에 보관해 프로세스 수명 동안 살아 있게 둔다 — 부수 효과로
+# 같은 세션에서 재실행 시 모델 재로딩(수십 초) 도 건너뛴다.
+_MODEL_CACHE: dict[tuple[str, str, str], object] = {}
+
+
 def _load_model(model_name: str, device: str, compute_type: str):
     """WhisperModel 로드. CUDA 초기화 실패 시 CPU/int8로 자동 fallback.
+
+    동일 (model_name, device, compute_type) 조합이 이미 로드돼 있으면
+    캐시된 인스턴스를 재사용한다 — 위 _MODEL_CACHE 주석 참고.
 
     단, 모델 파일 IO 에러는 device 와 무관하므로 fallback 하지 않고
     사용자에게 캐시 폴더 삭제 안내와 함께 즉시 raise 한다.
     """
     from faster_whisper import WhisperModel
 
+    cache_key = (model_name, device, compute_type)
+    if cache_key in _MODEL_CACHE:
+        print(f"[Stage 4] 캐시된 모델 재사용: {model_name}  device={device}  compute={compute_type}")
+        return _MODEL_CACHE[cache_key]
+
     def _try(dev, ct):
         print(f"[Stage 4] 모델 로딩: {model_name}  device={dev}  compute={ct}")
         return WhisperModel(model_name, device=dev, compute_type=ct)
 
+    actual_key = cache_key
     if device == "cuda":
         try:
-            return _try(device, compute_type)
+            model = _try(device, compute_type)
         except Exception as e:
             if _is_model_file_error(e):
                 # CPU 로 가도 같은 파일을 못 여니까 의미 없음 — 즉시 안내
@@ -84,17 +103,22 @@ def _load_model(model_name: str, device: str, compute_type: str):
             print(f"[Stage 4] CUDA 초기화 실패 ({e.__class__.__name__}: {e})")
             print("[Stage 4] CPU / int8 모드로 fallback합니다 (속도 느림)")
             try:
-                return _try("cpu", "int8")
+                model = _try("cpu", "int8")
+                actual_key = (model_name, "cpu", "int8")
             except Exception as e2:
                 if _is_model_file_error(e2):
                     _raise_model_file_error(model_name, e2)
                 raise
-    try:
-        return _try(device, compute_type)
-    except Exception as e:
-        if _is_model_file_error(e):
-            _raise_model_file_error(model_name, e)
-        raise
+    else:
+        try:
+            model = _try(device, compute_type)
+        except Exception as e:
+            if _is_model_file_error(e):
+                _raise_model_file_error(model_name, e)
+            raise
+
+    _MODEL_CACHE[actual_key] = model
+    return model
 
 
 def _load_config(config_path: str = "config.yaml") -> dict:
